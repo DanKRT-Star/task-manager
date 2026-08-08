@@ -1,0 +1,73 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: taskuser
+          POSTGRES_PASSWORD: testpassword
+          POSTGRES_DB: taskdb_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U taskuser -d taskdb_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    defaults:
+      run:
+        working-directory: ./backend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+
+      - name: Install dependencies
+        run: go mod download
+
+      - name: Build
+        run: go build ./...
+
+      - name: Run go vet
+        run: go vet ./...
+
+      - name: Check for known vulnerabilities
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck ./...
+
+      - name: Run tests with race detector
+        env:
+          DATABASE_URL: host=localhost user=taskuser password=testpassword dbname=taskdb_test port=5432 sslmode=disable
+          JWT_SECRET: ci-test-secret-key
+        run: go test ./... -race -v
+
+  docker-build:
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build backend Docker image
+        run: docker build -t task-manager-backend ./backend
+
+      - name: Build frontend Docker image
+        run: docker build -t task-manager-frontend ./frontend

@@ -50,7 +50,7 @@ func TestMain(m *testing.M) {
 		},
 	})
 	
-	v1.SetupRoutes(app, authHandler, taskHandler)
+	v1.SetupRoutes(app, authHandler, taskHandler, false)
 
 	code := m.Run()
 	os.Exit(code)

@@ -14,6 +14,8 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/cors"
 	"github.com/joho/godotenv"
+	"github.com/gofiber/fiber/v3/middleware/limiter"
+	"time"
 )
 
 func main() {
@@ -55,6 +57,12 @@ func main() {
 		AllowMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 	}))
 
+	// Giới hạn chung cho toàn bộ API — chống spam/DDoS cơ bản
+	app.Use(limiter.New(limiter.Config{
+		Max:        100,
+		Expiration: 1 * time.Minute,
+	}))
+
 	// Route test kiểm tra server sống
 	app.Get("/health", func(c fiber.Ctx) error {
 		sqlDB, err := config.DB.DB()
@@ -72,7 +80,7 @@ func main() {
 	})
 
 	// Đăng ký toàn bộ route API v1
-	v1.SetupRoutes(app, authHandler, taskHandler)
+	v1.SetupRoutes(app, authHandler, taskHandler, true)
 
 	port := os.Getenv("PORT")
 	if port == "" {

@@ -1,0 +1,20 @@
+# Backend (Go)
+backend/.env
+backend/.env.test
+backend/tmp/
+
+# Frontend (Node)
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

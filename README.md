@@ -47,6 +47,7 @@ Route → Handler → Service → Repository → Database
 - **Repository** — database queries via GORM, exposed through interfaces for mockability
 - **DTO** — request/response shapes, decoupled from database models
 
+```
 backend/
 ├── cmd/ # application entrypoint
 ├── internal/
@@ -62,7 +63,8 @@ backend/
 │ └── validator/ # validation setup
 ├── test/integration/ # end-to-end API tests
 └── Dockerfile
-
+```
+```
 frontend/
 ├── src/
 │ ├── components/ # reusable UI components
@@ -73,7 +75,7 @@ frontend/
 │ ├── services/ # API client layer
 │ └── types/ # TypeScript types
 └── Dockerfile
-
+```
 
 ## Getting Started
 

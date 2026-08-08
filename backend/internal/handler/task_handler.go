@@ -14,10 +14,23 @@ type TaskHandler struct {
 	TaskService *service.TaskService
 }
 
+
 func NewTaskHandler(taskService *service.TaskService) *TaskHandler {
 	return &TaskHandler{TaskService: taskService}
 }
 
+// CreateTask godoc
+// @Summary      Create a task
+// @Description  Create a new task for the authenticated user
+// @Tags         tasks
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        request body dto.CreateTaskRequest true "Task payload"
+// @Success      201 {object} model.Task
+// @Failure      400 {object} map[string]string "validation error"
+// @Failure      401 {object} map[string]string "missing or invalid token"
+// @Router       /tasks [post]
 func (h *TaskHandler) CreateTask(c fiber.Ctx) error {
 	userID := c.Locals("userID").(uint)
 
@@ -38,6 +51,19 @@ func (h *TaskHandler) CreateTask(c fiber.Ctx) error {
 	return c.Status(201).JSON(task)
 }
 
+// GetTasks godoc
+// @Summary      List tasks
+// @Description  Get a paginated list of tasks for the authenticated user, with optional filtering and sorting
+// @Tags         tasks
+// @Produce      json
+// @Security     BearerAuth
+// @Param        status query string false "Filter by status" Enums(pending, in_progress, done)
+// @Param        sort   query string false "Sort by deadline" Enums(deadline_asc, deadline_desc)
+// @Param        page   query int    false "Page number" default(1)
+// @Param        limit  query int    false "Items per page (max 100)" default(10)
+// @Success      200 {object} dto.TaskListResponse
+// @Failure      401 {object} map[string]string "missing or invalid token"
+// @Router       /tasks [get]
 func (h *TaskHandler) GetTasks(c fiber.Ctx) error {
 	userID := c.Locals("userID").(uint)
 
@@ -59,6 +85,19 @@ func (h *TaskHandler) GetTasks(c fiber.Ctx) error {
 	})
 }
 
+// UpdateTask godoc
+// @Summary      Update a task
+// @Description  Update a task owned by the authenticated user
+// @Tags         tasks
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id      path int true "Task ID"
+// @Param        request body dto.UpdateTaskRequest true "Fields to update"
+// @Success      200 {object} model.Task
+// @Failure      400 {object} map[string]string "validation error, invalid id, or not found/not owned"
+// @Failure      401 {object} map[string]string "missing or invalid token"
+// @Router       /tasks/{id} [put]
 func (h *TaskHandler) UpdateTask(c fiber.Ctx) error {
 	userID := c.Locals("userID").(uint)
 
@@ -84,6 +123,17 @@ func (h *TaskHandler) UpdateTask(c fiber.Ctx) error {
 	return c.JSON(task)
 }
 
+// DeleteTask godoc
+// @Summary      Delete a task
+// @Description  Delete a task owned by the authenticated user
+// @Tags         tasks
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id path int true "Task ID"
+// @Success      200 {object} map[string]string "message"
+// @Failure      400 {object} map[string]string "invalid id or not found/not owned"
+// @Failure      401 {object} map[string]string "missing or invalid token"
+// @Router       /tasks/{id} [delete]
 func (h *TaskHandler) DeleteTask(c fiber.Ctx) error {
 	userID := c.Locals("userID").(uint)
 

@@ -22,6 +22,7 @@ A full-stack task management application with user authentication, built to demo
 - `bcrypt` — password hashing
 - `go-playground/validator` — request validation
 - `testify` — testing (unit + integration)
+- `swaggo/swag` — auto-generated API documentation (Swagger/OpenAPI)
 
 **Frontend**
 - React + TypeScript + Vite
@@ -157,6 +158,13 @@ Test coverage includes:
 | PUT | `/api/v1/tasks/:id` | Update a task | ✅ |
 | DELETE | `/api/v1/tasks/:id` | Delete a task | ✅ |
 | GET | `/health` | Health check (includes DB connectivity) | ❌ |
+
+## API Documentation
+
+Interactive API documentation (Swagger UI) is available once the backend is running:
+http://localhost:3000/swagger/index.html
+
+To test authenticated endpoints, first call `POST /auth/login` to obtain a JWT token, then click **Authorize** in the Swagger UI and enter `Bearer <your-token>`.
 
 ## CI/CD
 

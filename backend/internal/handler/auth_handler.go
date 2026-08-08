@@ -16,6 +16,16 @@ func NewAuthHandler(authService *service.AuthService) *AuthHandler {
 	return &AuthHandler{AuthService: authService}
 }
 
+// Register godoc
+// @Summary      Register a new user
+// @Description  Create a new user account with a unique email and password
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        request body dto.RegisterRequest true "Registration payload"
+// @Success      201 {object} map[string]interface{} "message and created user"
+// @Failure      400 {object} map[string]string "validation error or email already taken"
+// @Router       /auth/register [post]
 func (h *AuthHandler) Register(c fiber.Ctx) error {
 	var req dto.RegisterRequest
 	if err := c.Bind().Body(&req); err != nil {
@@ -37,6 +47,18 @@ func (h *AuthHandler) Register(c fiber.Ctx) error {
 	})
 }
 
+// Login godoc
+// @Summary      Log in
+// @Description  Authenticate with email and password, returns a JWT token
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        request body dto.LoginRequest true "Login payload"
+// @Success      200 {object} dto.LoginResponse
+// @Failure      400 {object} map[string]string "validation error"
+// @Failure      401 {object} map[string]string "invalid credentials"
+// @Failure      429 {object} map[string]string "too many requests"
+// @Router       /auth/login [post]
 func (h *AuthHandler) Login(c fiber.Ctx) error {
 	var req dto.LoginRequest
 	if err := c.Bind().Body(&req); err != nil {
@@ -58,6 +80,15 @@ func (h *AuthHandler) Login(c fiber.Ctx) error {
 	})
 }
 
+// GetMe godoc
+// @Summary      Get current user info
+// @Description  Retrieve information about the currently authenticated user
+// @Tags         auth
+// @Produce      json
+// @Success      200 {object} model.User
+// @Failure      401 {object} map[string]string "unauthorized"
+// @Failure      404 {object} map[string]string "user not found"
+// @Router       /auth/me [get]
 func (h *AuthHandler) GetMe(c fiber.Ctx) error {
 	userID, ok := c.Locals("userID").(uint)
 	if !ok || userID == 0 {

@@ -1,0 +1,389 @@
+basePath: /api/v1
+definitions:
+  dto.CreateTaskRequest:
+    properties:
+      deadline:
+        type: string
+      description:
+        maxLength: 1000
+        type: string
+      status:
+        $ref: '#/definitions/model.TaskStatus'
+      title:
+        maxLength: 200
+        minLength: 1
+        type: string
+    required:
+    - title
+    type: object
+  dto.LoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  dto.LoginResponse:
+    properties:
+      message:
+        type: string
+      token:
+        type: string
+    type: object
+  dto.RegisterRequest:
+    properties:
+      email:
+        type: string
+      password:
+        minLength: 8
+        type: string
+      userName:
+        minLength: 2
+        type: string
+    required:
+    - email
+    - password
+    - userName
+    type: object
+  dto.TaskListResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/model.Task'
+        type: array
+      limit:
+        type: integer
+      page:
+        type: integer
+      total:
+        type: integer
+    type: object
+  dto.UpdateTaskRequest:
+    properties:
+      deadline:
+        type: string
+      description:
+        maxLength: 1000
+        type: string
+      status:
+        $ref: '#/definitions/model.TaskStatus'
+      title:
+        maxLength: 200
+        minLength: 1
+        type: string
+    type: object
+  model.Task:
+    properties:
+      createdAt:
+        type: string
+      deadline:
+        type: string
+      description:
+        type: string
+      status:
+        $ref: '#/definitions/model.TaskStatus'
+      taskId:
+        type: integer
+      title:
+        type: string
+      updatedAt:
+        type: string
+      userId:
+        type: integer
+    type: object
+  model.TaskStatus:
+    enum:
+    - pending
+    - in_progress
+    - done
+    type: string
+    x-enum-varnames:
+    - StatusPending
+    - StatusInProgress
+    - StatusDone
+  model.User:
+    properties:
+      createdAt:
+        type: string
+      email:
+        type: string
+      tasks:
+        items:
+          $ref: '#/definitions/model.Task'
+        type: array
+      updatedAt:
+        type: string
+      userId:
+        type: integer
+      userName:
+        type: string
+    type: object
+host: localhost:3000
+info:
+  contact: {}
+  description: REST API for a task management application with JWT authentication.
+  title: Task Manager API
+  version: "1.0"
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate with email and password, returns a JWT token
+      parameters:
+      - description: Login payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.LoginResponse'
+        "400":
+          description: validation error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: invalid credentials
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "429":
+          description: too many requests
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Log in
+      tags:
+      - auth
+  /auth/me:
+    get:
+      description: Retrieve information about the currently authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.User'
+        "401":
+          description: unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: user not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get current user info
+      tags:
+      - auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Create a new user account with a unique email and password
+      parameters:
+      - description: Registration payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: message and created user
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: validation error or email already taken
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Register a new user
+      tags:
+      - auth
+  /tasks:
+    get:
+      description: Get a paginated list of tasks for the authenticated user, with
+        optional filtering and sorting
+      parameters:
+      - description: Filter by status
+        enum:
+        - pending
+        - in_progress
+        - done
+        in: query
+        name: status
+        type: string
+      - description: Sort by deadline
+        enum:
+        - deadline_asc
+        - deadline_desc
+        in: query
+        name: sort
+        type: string
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Items per page (max 100)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.TaskListResponse'
+        "401":
+          description: missing or invalid token
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List tasks
+      tags:
+      - tasks
+    post:
+      consumes:
+      - application/json
+      description: Create a new task for the authenticated user
+      parameters:
+      - description: Task payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateTaskRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.Task'
+        "400":
+          description: validation error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: missing or invalid token
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a task
+      tags:
+      - tasks
+  /tasks/{id}:
+    delete:
+      description: Delete a task owned by the authenticated user
+      parameters:
+      - description: Task ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: message
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: invalid id or not found/not owned
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: missing or invalid token
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a task
+      tags:
+      - tasks
+    put:
+      consumes:
+      - application/json
+      description: Update a task owned by the authenticated user
+      parameters:
+      - description: Task ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Fields to update
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateTaskRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Task'
+        "400":
+          description: validation error, invalid id, or not found/not owned
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: missing or invalid token
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update a task
+      tags:
+      - tasks
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and the JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

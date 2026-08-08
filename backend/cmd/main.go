@@ -16,7 +16,21 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/gofiber/fiber/v3/middleware/limiter"
 	"time"
+	_ "github.com/DanKRT-Star/task-manager/docs"
+	"github.com/gofiber/contrib/v3/swaggo"
 )
+
+// @title           Task Manager API
+// @version         1.0
+// @description     REST API for a task management application with JWT authentication.
+// @host            localhost:3000
+// @BasePath        /api/v1
+
+// @securityDefinitions.apikey  BearerAuth
+// @in                          header
+// @name                        Authorization
+// @description                 Type "Bearer" followed by a space and the JWT token.
+
 
 func main() {
 	// Load biến môi trường từ file .env
@@ -78,6 +92,9 @@ func main() {
 			"message": "Server is running",
 		})
 	})
+
+	// Route Swagger
+	app.Get("/swagger/*", swaggo.New(swaggo.Config{}))
 
 	// Đăng ký toàn bộ route API v1
 	v1.SetupRoutes(app, authHandler, taskHandler, true)

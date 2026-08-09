@@ -4,6 +4,12 @@ A full-stack task management application with user authentication, built to demo
 
 ![Backend CI](https://github.com/DanKRT-Star/task-manager/actions/workflows/backend-ci.yml/badge.svg)
 
+## Live Demo
+
+- **App:** https://task-manager-phi-one-73.vercel.app
+- **API:** https://task-manager-backend-t3to.onrender.com
+- **API Docs (Swagger):** https://task-manager-backend-t3to.onrender.com/swagger/index.html
+
 ## Features
 
 - **User Authentication** — Register and log in with JWT-based auth; passwords hashed with bcrypt.

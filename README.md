@@ -10,6 +10,8 @@ A full-stack task management application with user authentication, built to demo
 - **API:** https://task-manager-backend-t3to.onrender.com
 - **API Docs (Swagger):** https://task-manager-backend-t3to.onrender.com/swagger/index.html
 
+> Note: the backend is hosted on a free tier and may take 30–50 seconds to wake up on the first request after a period of inactivity.
+
 ## Features
 
 - **User Authentication** — Register and log in with JWT-based auth; passwords hashed with bcrypt.

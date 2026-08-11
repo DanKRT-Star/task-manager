@@ -1,12 +1,37 @@
 basePath: /api/v1
 definitions:
-  dto.CreateTaskRequest:
+  dto.AddMemberRequest:
+    properties:
+      email:
+        type: string
+    required:
+    - email
+    type: object
+  dto.CreateProjectRequest:
     properties:
       deadline:
         type: string
       description:
         maxLength: 1000
         type: string
+      name:
+        maxLength: 200
+        minLength: 1
+        type: string
+    required:
+    - name
+    type: object
+  dto.CreateTaskRequest:
+    properties:
+      assigneeId:
+        type: integer
+      deadline:
+        type: string
+      description:
+        maxLength: 1000
+        type: string
+      projectId:
+        type: integer
       status:
         $ref: '#/definitions/model.TaskStatus'
       title:
@@ -61,8 +86,22 @@ definitions:
       total:
         type: integer
     type: object
+  dto.UpdateProjectRequest:
+    properties:
+      deadline:
+        type: string
+      description:
+        maxLength: 1000
+        type: string
+      name:
+        maxLength: 200
+        minLength: 1
+        type: string
+    type: object
   dto.UpdateTaskRequest:
     properties:
+      assigneeId:
+        type: integer
       deadline:
         type: string
       description:
@@ -75,7 +114,7 @@ definitions:
         minLength: 1
         type: string
     type: object
-  model.Task:
+  model.Project:
     properties:
       createdAt:
         type: string
@@ -83,6 +122,58 @@ definitions:
         type: string
       description:
         type: string
+      members:
+        items:
+          $ref: '#/definitions/model.ProjectMember'
+        type: array
+      name:
+        type: string
+      ownerId:
+        type: integer
+      projectId:
+        type: integer
+      tasks:
+        items:
+          $ref: '#/definitions/model.Task'
+        type: array
+      updatedAt:
+        type: string
+    type: object
+  model.ProjectMember:
+    properties:
+      createdAt:
+        type: string
+      projectId:
+        type: integer
+      projectMemberId:
+        type: integer
+      role:
+        $ref: '#/definitions/model.ProjectRole'
+      user:
+        $ref: '#/definitions/model.User'
+      userId:
+        type: integer
+    type: object
+  model.ProjectRole:
+    enum:
+    - owner
+    - member
+    type: string
+    x-enum-varnames:
+    - RoleOwner
+    - RoleMember
+  model.Task:
+    properties:
+      assigneeId:
+        type: integer
+      createdAt:
+        type: string
+      deadline:
+        type: string
+      description:
+        type: string
+      projectId:
+        type: integer
       status:
         $ref: '#/definitions/model.TaskStatus'
       taskId:
@@ -222,6 +313,350 @@ paths:
       summary: Register a new user
       tags:
       - auth
+  /projects:
+    get:
+      description: Get all projects the authenticated user is a member or owner of
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'data: array of projects'
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: missing or invalid token
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List my projects
+      tags:
+      - projects
+    post:
+      consumes:
+      - application/json
+      description: Create a new project; the creator automatically becomes the project
+        owner
+      parameters:
+      - description: Project payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateProjectRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.Project'
+        "400":
+          description: validation error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: missing or invalid token
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a project
+      tags:
+      - projects
+  /projects/{id}:
+    delete:
+      description: Delete a project; only the project owner can perform this action.
+        Tasks in the project are unlinked, not deleted.
+      parameters:
+      - description: Project ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: message
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: invalid id or not the owner
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: missing or invalid token
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a project
+      tags:
+      - projects
+    get:
+      description: Get project details; the requester must be a member of the project
+      parameters:
+      - description: Project ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Project'
+        "400":
+          description: invalid id or access denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: missing or invalid token
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a project
+      tags:
+      - projects
+    put:
+      consumes:
+      - application/json
+      description: Update project details; only the project owner can perform this
+        action
+      parameters:
+      - description: Project ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Fields to update
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateProjectRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Project'
+        "400":
+          description: validation error, invalid id, or not the owner
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: missing or invalid token
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update a project
+      tags:
+      - projects
+  /projects/{id}/members:
+    get:
+      description: Get all members of a project; the requester must be a member of
+        the project
+      parameters:
+      - description: Project ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'data: array of members'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: invalid id or access denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: missing or invalid token
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List project members
+      tags:
+      - projects
+    post:
+      consumes:
+      - application/json
+      description: Add a user to the project by email; only the project owner can
+        perform this action
+      parameters:
+      - description: Project ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Member email
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.AddMemberRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.ProjectMember'
+        "400":
+          description: validation error, not the owner, user not found, or already
+            a member
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: missing or invalid token
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Add a project member
+      tags:
+      - projects
+  /projects/{id}/members/{userId}:
+    delete:
+      description: Remove a member from the project; only the project owner can perform
+        this action. The owner cannot be removed.
+      parameters:
+      - description: Project ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: User ID to remove
+        in: path
+        name: userId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: message
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: invalid id, not the owner, or attempting to remove the owner
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: missing or invalid token
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Remove a project member
+      tags:
+      - projects
+  /projects/{id}/tasks:
+    get:
+      description: Get a paginated list of tasks belonging to a project; the requester
+        must be a member of the project
+      parameters:
+      - description: Project ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Filter by status
+        enum:
+        - pending
+        - in_progress
+        - done
+        in: query
+        name: status
+        type: string
+      - description: Sort by deadline
+        enum:
+        - deadline_asc
+        - deadline_desc
+        in: query
+        name: sort
+        type: string
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Items per page (max 100)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.TaskListResponse'
+        "400":
+          description: invalid id or access denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: missing or invalid token
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List tasks in a project
+      tags:
+      - tasks
   /tasks:
     get:
       description: Get a paginated list of tasks for the authenticated user, with
@@ -273,7 +708,8 @@ paths:
     post:
       consumes:
       - application/json
-      description: Create a new task for the authenticated user
+      description: Create a new task for the authenticated user, optionally attached
+        to a project and assigned to a project member
       parameters:
       - description: Task payload
         in: body

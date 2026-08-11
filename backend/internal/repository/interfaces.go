@@ -11,7 +11,24 @@ type UserRepositoryInterface interface {
 type TaskRepositoryInterface interface {
 	Create(task *model.Task) error
 	FindByID(taskID, userID uint) (*model.Task, error)
+	FindByIDOnly(taskID uint) (*model.Task, error)
 	FindAll(userID uint, status string, sort string, page, limit int) ([]model.Task, int64, error)
+	FindAllByProject(projectID uint, status string, sort string, page, limit int) ([]model.Task, int64, error)
 	Update(task *model.Task) error
-	Delete(taskID, userID uint) error
+	Delete(taskID uint) error
+}
+
+type ProjectRepositoryInterface interface {
+	Create(project *model.Project) error
+	FindByID(projectID uint) (*model.Project, error)
+	FindAllByUser(userID uint) ([]model.Project, error)
+	Update(project *model.Project) error
+	Delete(projectID uint) error
+}
+
+type ProjectMemberRepositoryInterface interface {
+	AddMember(member *model.ProjectMember) error
+	FindMember(projectID, userID uint) (*model.ProjectMember, error)
+	FindMembersByProject(projectID uint) ([]model.ProjectMember, error)
+	RemoveMember(projectID, userID uint) error
 }

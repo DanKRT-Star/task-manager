@@ -63,12 +63,13 @@ func TestTaskService_CreateTask(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockRepo := new(MockTaskRepository)
+			mockMemberRepo := new(MockProjectMemberRepository)
 			if !tt.expectError {
 				mockRepo.On("Create", mock.AnythingOfType("*model.Task")).Return(nil)
 			}
 
-			taskService := NewTaskService(mockRepo)
-			task, err := taskService.CreateTask(1, tt.title, "desc", tt.status, tt.deadline)
+			taskService := NewTaskService(mockRepo, mockMemberRepo)
+			task, err := taskService.CreateTask(1, tt.title, "desc", tt.status, tt.deadline, nil, nil)
 
 			if tt.expectError {
 				assert.Error(t, err)
@@ -86,15 +87,17 @@ func TestTaskService_CreateTask(t *testing.T) {
 
 func TestTaskService_UpdateTask_AuthorizationDenied(t *testing.T) {
 	mockRepo := new(MockTaskRepository)
-	// Giả lập: FindByID không tìm thấy task thuộc userID này (task của người khác)
-	mockRepo.On("FindByID", uint(1), uint(2)).Return(nil, assert.AnError)
+	mockMemberRepo := new(MockProjectMemberRepository)
 
-	taskService := NewTaskService(mockRepo)
-	task, err := taskService.UpdateTask(1, 2, "New title", "", "", "")
+	// Task thuộc user 1, không nằm trong project nào — user 2 không phải chủ sở hữu
+	mockRepo.On("FindByIDOnly", uint(1)).Return(&model.Task{TaskID: 1, UserID: 1, ProjectID: nil}, nil)
+
+	taskService := NewTaskService(mockRepo, mockMemberRepo)
+	task, err := taskService.UpdateTask(1, 2, "New title", "", "", "", nil)
 
 	assert.Error(t, err)
 	assert.Nil(t, task)
-	assert.Contains(t, err.Error(), "access denied")
+	assert.Contains(t, err.Error(), "permission")
 }
 
 func TestTaskService_DeleteTask(t *testing.T) {
@@ -107,13 +110,13 @@ func TestTaskService_DeleteTask(t *testing.T) {
 	}{
 		{
 			name:        "success",
-			findResult:  &model.Task{TaskID: 1, UserID: 1},
+			findResult:  &model.Task{TaskID: 1, UserID: 1, ProjectID: nil},
 			findErr:     nil,
 			deleteErr:   nil,
 			expectError: false,
 		},
 		{
-			name:        "fail - task not found or not owned",
+			name:        "fail - task not found",
 			findResult:  nil,
 			findErr:     assert.AnError,
 			expectError: true,
@@ -123,13 +126,14 @@ func TestTaskService_DeleteTask(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockRepo := new(MockTaskRepository)
-			mockRepo.On("FindByID", uint(1), uint(1)).Return(tt.findResult, tt.findErr)
+			mockMemberRepo := new(MockProjectMemberRepository)
+			mockRepo.On("FindByIDOnly", uint(1)).Return(tt.findResult, tt.findErr)
 
 			if !tt.expectError {
-				mockRepo.On("Delete", uint(1), uint(1)).Return(tt.deleteErr)
+				mockRepo.On("Delete", uint(1)).Return(tt.deleteErr)
 			}
 
-			taskService := NewTaskService(mockRepo)
+			taskService := NewTaskService(mockRepo, mockMemberRepo)
 			err := taskService.DeleteTask(1, 1)
 
 			if tt.expectError {
@@ -139,4 +143,60 @@ func TestTaskService_DeleteTask(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestTaskService_UpdateTask_ProjectMemberCanEditOwnTask(t *testing.T) {
+	mockRepo := new(MockTaskRepository)
+	mockMemberRepo := new(MockProjectMemberRepository)
+
+	projectID := uint(10)
+	task := &model.Task{TaskID: 1, UserID: 2, ProjectID: &projectID}
+
+	mockRepo.On("FindByIDOnly", uint(1)).Return(task, nil)
+	mockMemberRepo.On("FindMember", projectID, uint(2)).Return(&model.ProjectMember{Role: model.RoleMember}, nil)
+	mockRepo.On("Update", mock.AnythingOfType("*model.Task")).Return(nil)
+
+	taskService := NewTaskService(mockRepo, mockMemberRepo)
+	updated, err := taskService.UpdateTask(1, 2, "Updated title", "", "", "", nil)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, updated)
+	assert.Equal(t, "Updated title", updated.Title)
+}
+
+func TestTaskService_UpdateTask_ProjectMemberCannotEditOthersTask(t *testing.T) {
+	mockRepo := new(MockTaskRepository)
+	mockMemberRepo := new(MockProjectMemberRepository)
+
+	projectID := uint(10)
+	// task được tạo bởi user 3, không assign cho ai
+	task := &model.Task{TaskID: 1, UserID: 3, ProjectID: &projectID, AssigneeID: nil}
+
+	mockRepo.On("FindByIDOnly", uint(1)).Return(task, nil)
+	mockMemberRepo.On("FindMember", projectID, uint(2)).Return(&model.ProjectMember{Role: model.RoleMember}, nil)
+
+	taskService := NewTaskService(mockRepo, mockMemberRepo)
+	updated, err := taskService.UpdateTask(1, 2, "Updated title", "", "", "", nil)
+
+	assert.Error(t, err)
+	assert.Nil(t, updated)
+	assert.Contains(t, err.Error(), "permission")
+}
+
+func TestTaskService_UpdateTask_ProjectOwnerCanEditAnyTask(t *testing.T) {
+	mockRepo := new(MockTaskRepository)
+	mockMemberRepo := new(MockProjectMemberRepository)
+
+	projectID := uint(10)
+	task := &model.Task{TaskID: 1, UserID: 3, ProjectID: &projectID}
+
+	mockRepo.On("FindByIDOnly", uint(1)).Return(task, nil)
+	mockMemberRepo.On("FindMember", projectID, uint(1)).Return(&model.ProjectMember{Role: model.RoleOwner}, nil)
+	mockRepo.On("Update", mock.AnythingOfType("*model.Task")).Return(nil)
+
+	taskService := NewTaskService(mockRepo, mockMemberRepo)
+	updated, err := taskService.UpdateTask(1, 1, "Owner edited this", "", "", "", nil)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, updated)
 }

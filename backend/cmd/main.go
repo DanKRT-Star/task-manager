@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"os"
+	"time"
 
 	apperror "github.com/DanKRT-Star/task-manager/internal/apperror"
 	"github.com/DanKRT-Star/task-manager/internal/config"
@@ -13,9 +14,9 @@ import (
 	"github.com/DanKRT-Star/task-manager/internal/service"
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/cors"
-	"github.com/joho/godotenv"
 	"github.com/gofiber/fiber/v3/middleware/limiter"
-	"time"
+	"github.com/joho/godotenv"
+
 	_ "github.com/DanKRT-Star/task-manager/docs"
 	"github.com/gofiber/contrib/v3/swaggo"
 )
@@ -31,7 +32,6 @@ import (
 // @name                        Authorization
 // @description                 Type "Bearer" followed by a space and the JWT token.
 
-
 func main() {
 	// Load biến môi trường từ file .env
 	if err := godotenv.Load(); err != nil {
@@ -42,21 +42,28 @@ func main() {
 	config.ConnectDatabase()
 
 	// Tự động tạo bảng theo model
-	config.DB.AutoMigrate(&model.User{}, &model.Task{})
+	config.DB.AutoMigrate(&model.User{})
+	config.DB.AutoMigrate(&model.Project{})
+	config.DB.AutoMigrate(&model.Task{})
+	config.DB.AutoMigrate(&model.ProjectMember{})
 
 	// Wiring: repository -> service -> handler
 	userRepo := repository.NewUserRepository(config.DB)
 	taskRepo := repository.NewTaskRepository(config.DB)
+	projectRepo := repository.NewProjectRepository(config.DB)
+	memberRepo := repository.NewProjectMemberRepository(config.DB)
 
 	authService := service.NewAuthService(userRepo)
-	taskService := service.NewTaskService(taskRepo)
+	taskService := service.NewTaskService(taskRepo, memberRepo)
+	projectService := service.NewProjectService(projectRepo, memberRepo, userRepo)
 
 	authHandler := handler.NewAuthHandler(authService)
 	taskHandler := handler.NewTaskHandler(taskService)
+	projectHandler := handler.NewProjectHandler(projectService)
 
 	// Khởi tạo Fiber app
 	app := fiber.New(fiber.Config{
-	ErrorHandler: func(c fiber.Ctx, err error) error {
+		ErrorHandler: func(c fiber.Ctx, err error) error {
 			if appErr, ok := err.(*apperror.AppError); ok {
 				return c.Status(appErr.Code).JSON(fiber.Map{"error": appErr.Message})
 			}
@@ -82,7 +89,7 @@ func main() {
 		sqlDB, err := config.DB.DB()
 		if err != nil || sqlDB.Ping() != nil {
 			return c.Status(503).JSON(fiber.Map{
-				"status":  "error",
+				"status":   "error",
 				"database": "unreachable",
 			})
 		}
@@ -97,7 +104,7 @@ func main() {
 	app.Get("/swagger/*", swaggo.New(swaggo.Config{}))
 
 	// Đăng ký toàn bộ route API v1
-	v1.SetupRoutes(app, authHandler, taskHandler, true)
+	v1.SetupRoutes(app, authHandler, taskHandler, projectHandler, true)
 
 	port := os.Getenv("PORT")
 	if port == "" {

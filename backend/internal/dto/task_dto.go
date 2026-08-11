@@ -7,6 +7,8 @@ type CreateTaskRequest struct {
 	Description string           `json:"description" validate:"max=1000"`
 	Status      model.TaskStatus `json:"status"`
 	Deadline    string           `json:"deadline"`
+	ProjectID   *uint            `json:"projectId"`
+	AssigneeID  *uint            `json:"assigneeId"`
 }
 
 type UpdateTaskRequest struct {
@@ -14,6 +16,7 @@ type UpdateTaskRequest struct {
 	Description string           `json:"description" validate:"omitempty,max=1000"`
 	Status      model.TaskStatus `json:"status"`
 	Deadline    string           `json:"deadline"`
+	AssigneeID  *uint            `json:"assigneeId"`
 }
 
 type TaskListResponse struct {

@@ -21,7 +21,7 @@ func NewTaskHandler(taskService *service.TaskService) *TaskHandler {
 
 // CreateTask godoc
 // @Summary      Create a task
-// @Description  Create a new task for the authenticated user
+// @Description  Create a new task for the authenticated user, optionally attached to a project and assigned to a project member
 // @Tags         tasks
 // @Accept       json
 // @Produce      json
@@ -38,19 +38,17 @@ func (h *TaskHandler) CreateTask(c fiber.Ctx) error {
 	if err := c.Bind().Body(&req); err != nil {
 		return apperror.BadRequest("invalid request body")
 	}
-
 	if err := validator.Validate.Struct(req); err != nil {
 		return apperror.BadRequest(validator.FormatValidationError(err))
 	}
 
-	task, err := h.TaskService.CreateTask(userID, req.Title, req.Description, req.Status, req.Deadline)
+	task, err := h.TaskService.CreateTask(userID, req.Title, req.Description, req.Status, req.Deadline, req.ProjectID, req.AssigneeID)
 	if err != nil {
 		return apperror.BadRequest(err.Error())
 	}
 
 	return c.Status(201).JSON(task)
 }
-
 // GetTasks godoc
 // @Summary      List tasks
 // @Description  Get a paginated list of tasks for the authenticated user, with optional filtering and sorting
@@ -110,12 +108,11 @@ func (h *TaskHandler) UpdateTask(c fiber.Ctx) error {
 	if err := c.Bind().Body(&req); err != nil {
 		return apperror.BadRequest("invalid request body")
 	}
-
 	if err := validator.Validate.Struct(req); err != nil {
 		return apperror.BadRequest(validator.FormatValidationError(err))
 	}
 
-	task, err := h.TaskService.UpdateTask(uint(taskID), userID, req.Title, req.Description, req.Status, req.Deadline)
+	task, err := h.TaskService.UpdateTask(uint(taskID), userID, req.Title, req.Description, req.Status, req.Deadline, req.AssigneeID)
 	if err != nil {
 		return apperror.BadRequest(err.Error())
 	}
@@ -147,4 +144,45 @@ func (h *TaskHandler) DeleteTask(c fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{"message": "task deleted successfully"})
+}
+
+// GetProjectTasks godoc
+// @Summary      List tasks in a project
+// @Description  Get a paginated list of tasks belonging to a project; the requester must be a member of the project
+// @Tags         tasks
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id     path  int    true  "Project ID"
+// @Param        status query string false "Filter by status" Enums(pending, in_progress, done)
+// @Param        sort   query string false "Sort by deadline" Enums(deadline_asc, deadline_desc)
+// @Param        page   query int    false "Page number" default(1)
+// @Param        limit  query int    false "Items per page (max 100)" default(10)
+// @Success      200 {object} dto.TaskListResponse
+// @Failure      400 {object} map[string]string "invalid id or access denied"
+// @Failure      401 {object} map[string]string "missing or invalid token"
+// @Router       /projects/{id}/tasks [get]
+func (h *TaskHandler) GetProjectTasks(c fiber.Ctx) error {
+	userID := c.Locals("userID").(uint)
+
+	projectID, err := strconv.Atoi(c.Params("id"))
+	if err != nil {
+		return apperror.BadRequest("invalid project id")
+	}
+
+	status := c.Query("status")
+	sort := c.Query("sort")
+	page, _ := strconv.Atoi(c.Query("page", "1"))
+	limit, _ := strconv.Atoi(c.Query("limit", "10"))
+
+	tasks, total, err := h.TaskService.GetProjectTasks(userID, uint(projectID), status, sort, page, limit)
+	if err != nil {
+		return apperror.BadRequest(err.Error())
+	}
+
+	return c.JSON(dto.TaskListResponse{
+		Data:  tasks,
+		Total: total,
+		Page:  page,
+		Limit: limit,
+	})
 }

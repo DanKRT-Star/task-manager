@@ -21,10 +21,16 @@ func TestIntegration_RateLimit_AuthLogin(t *testing.T) {
 
 	userRepo := repository.NewUserRepository(db)
 	taskRepo := repository.NewTaskRepository(db)
+	projectRepo := repository.NewProjectRepository(db)
+	memberRepo := repository.NewProjectMemberRepository(db)
+
 	authService := service.NewAuthService(userRepo)
-	taskService := service.NewTaskService(taskRepo)
+	taskService := service.NewTaskService(taskRepo, memberRepo)
+	projectService := service.NewProjectService(projectRepo, memberRepo, userRepo)
+
 	authHandler := handler.NewAuthHandler(authService)
 	taskHandler := handler.NewTaskHandler(taskService)
+	projectHandler := handler.NewProjectHandler(projectService)
 
 	rateLimitedApp := fiber.New(fiber.Config{
 		ErrorHandler: func(c fiber.Ctx, err error) error {
@@ -34,8 +40,7 @@ func TestIntegration_RateLimit_AuthLogin(t *testing.T) {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "internal server error"})
 		},
 	})
-	// Bật rate limit thật cho app riêng này (true), không đụng tới app toàn cục
-	v1.SetupRoutes(rateLimitedApp, authHandler, taskHandler, true)
+	v1.SetupRoutes(rateLimitedApp, authHandler, taskHandler, projectHandler, true)
 
 	loginBody := map[string]string{
 		"email":    "ratelimit@example.com",

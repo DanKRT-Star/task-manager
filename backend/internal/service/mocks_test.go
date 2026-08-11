@@ -49,8 +49,21 @@ func (m *MockTaskRepository) FindByID(taskID, userID uint) (*model.Task, error) 
 	return args.Get(0).(*model.Task), args.Error(1)
 }
 
+func (m *MockTaskRepository) FindByIDOnly(taskID uint) (*model.Task, error) {
+	args := m.Called(taskID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*model.Task), args.Error(1)
+}
+
 func (m *MockTaskRepository) FindAll(userID uint, status, sort string, page, limit int) ([]model.Task, int64, error) {
 	args := m.Called(userID, status, sort, page, limit)
+	return args.Get(0).([]model.Task), args.Get(1).(int64), args.Error(2)
+}
+
+func (m *MockTaskRepository) FindAllByProject(projectID uint, status, sort string, page, limit int) ([]model.Task, int64, error) {
+	args := m.Called(projectID, status, sort, page, limit)
 	return args.Get(0).([]model.Task), args.Get(1).(int64), args.Error(2)
 }
 
@@ -59,7 +72,68 @@ func (m *MockTaskRepository) Update(task *model.Task) error {
 	return args.Error(0)
 }
 
-func (m *MockTaskRepository) Delete(taskID, userID uint) error {
-	args := m.Called(taskID, userID)
+func (m *MockTaskRepository) Delete(taskID uint) error {
+	args := m.Called(taskID)
+	return args.Error(0)
+}
+
+// MockProjectMemberRepository giả lập ProjectMemberRepositoryInterface
+type MockProjectMemberRepository struct {
+	mock.Mock
+}
+
+func (m *MockProjectMemberRepository) AddMember(member *model.ProjectMember) error {
+	args := m.Called(member)
+	return args.Error(0)
+}
+
+func (m *MockProjectMemberRepository) FindMember(projectID, userID uint) (*model.ProjectMember, error) {
+	args := m.Called(projectID, userID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*model.ProjectMember), args.Error(1)
+}
+
+func (m *MockProjectMemberRepository) FindMembersByProject(projectID uint) ([]model.ProjectMember, error) {
+	args := m.Called(projectID)
+	return args.Get(0).([]model.ProjectMember), args.Error(1)
+}
+
+func (m *MockProjectMemberRepository) RemoveMember(projectID, userID uint) error {
+	args := m.Called(projectID, userID)
+	return args.Error(0)
+}
+
+// MockProjectRepository giả lập ProjectRepositoryInterface
+type MockProjectRepository struct {
+	mock.Mock
+}
+
+func (m *MockProjectRepository) Create(project *model.Project) error {
+	args := m.Called(project)
+	return args.Error(0)
+}
+
+func (m *MockProjectRepository) FindByID(projectID uint) (*model.Project, error) {
+	args := m.Called(projectID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*model.Project), args.Error(1)
+}
+
+func (m *MockProjectRepository) FindAllByUser(userID uint) ([]model.Project, error) {
+	args := m.Called(userID)
+	return args.Get(0).([]model.Project), args.Error(1)
+}
+
+func (m *MockProjectRepository) Update(project *model.Project) error {
+	args := m.Called(project)
+	return args.Error(0)
+}
+
+func (m *MockProjectRepository) Delete(projectID uint) error {
+	args := m.Called(projectID)
 	return args.Error(0)
 }

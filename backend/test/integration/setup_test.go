@@ -50,6 +50,7 @@ func TestMain(m *testing.M) {
 	sprintService := service.NewSprintService(sprintRepo, memberRepo)
 	commentService := service.NewCommentService(commentRepo, taskRepo, memberRepo)
 	labelService := service.NewLabelService(labelRepo, taskRepo, memberRepo)
+	activityLogService := service.NewActivityLogService(activityRepo, taskRepo, memberRepo)
 
 	authHandler := handler.NewAuthHandler(authService)
 	taskHandler := handler.NewTaskHandler(taskService)
@@ -59,6 +60,7 @@ func TestMain(m *testing.M) {
 	sprintHandler := handler.NewSprintHandler(sprintService)
 	commentHandler := handler.NewCommentHandler(commentService)
 	labelHandler := handler.NewLabelHandler(labelService)
+	activityLogHandler := handler.NewActivityLogHandler(activityLogService)
 
 	app = fiber.New(fiber.Config{
 		ErrorHandler: func(c fiber.Ctx, err error) error {
@@ -69,7 +71,7 @@ func TestMain(m *testing.M) {
 		},
 	})
 
-	v1.SetupRoutes(app, authHandler, taskHandler, projectHandler, epicHandler, milestoneHandler, sprintHandler, commentHandler, labelHandler, false)
+	v1.SetupRoutes(app, authHandler, taskHandler, projectHandler, epicHandler, milestoneHandler, sprintHandler, commentHandler, labelHandler, activityLogHandler,false)
 
 	code := m.Run()
 	os.Exit(code)

@@ -60,6 +60,7 @@ func main() {
 	sprintService := service.NewSprintService(sprintRepo, memberRepo)
 	commentService := service.NewCommentService(commentRepo, taskRepo, memberRepo)
 	labelService := service.NewLabelService(labelRepo, taskRepo, memberRepo)
+	activityLogService := service.NewActivityLogService(activityRepo, taskRepo, memberRepo)
 
 	authHandler := handler.NewAuthHandler(authService)
 	taskHandler := handler.NewTaskHandler(taskService)
@@ -69,6 +70,7 @@ func main() {
 	sprintHandler := handler.NewSprintHandler(sprintService)
 	commentHandler := handler.NewCommentHandler(commentService)
 	labelHandler := handler.NewLabelHandler(labelService)
+	activityLogHandler := handler.NewActivityLogHandler(activityLogService)
 
 	app := fiber.New(fiber.Config{
 		ErrorHandler: func(c fiber.Ctx, err error) error {
@@ -100,7 +102,7 @@ func main() {
 
 	app.Get("/swagger/*", swaggo.New(swaggo.Config{}))
 
-	v1.SetupRoutes(app, authHandler, taskHandler, projectHandler, epicHandler, milestoneHandler, sprintHandler, commentHandler, labelHandler, true)
+	v1.SetupRoutes(app, authHandler, taskHandler, projectHandler, epicHandler, milestoneHandler, sprintHandler, commentHandler, labelHandler, activityLogHandler,true)
 
 	port := os.Getenv("PORT")
 	if port == "" {

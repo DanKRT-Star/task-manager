@@ -19,6 +19,7 @@ func SetupRoutes(
 	sprintHandler *handler.SprintHandler,
 	commentHandler *handler.CommentHandler,
 	labelHandler *handler.LabelHandler,
+	activityLogHandler *handler.ActivityLogHandler,
 	enableRateLimit bool,
 ) {
 	api := app.Group("/api/v1")
@@ -45,6 +46,7 @@ func SetupRoutes(
 	tasks.Post("/:taskId/labels/:labelId", labelHandler.AttachLabel)
 	tasks.Delete("/:taskId/labels/:labelId", labelHandler.DetachLabel)
 	tasks.Get("/:taskId/labels", labelHandler.GetTaskLabels)
+	tasks.Get("/:taskId/activity", activityLogHandler.GetTaskActivity)
 
 	epics := api.Group("/epics", middleware.AuthRequired)
 	epics.Put("/:epicId", epicHandler.UpdateEpic)

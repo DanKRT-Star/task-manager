@@ -48,3 +48,11 @@ type MilestoneRepositoryInterface interface {
 	Update(milestone *model.Milestone) error
 	Delete(milestoneID uint) error
 }
+
+type SprintRepositoryInterface interface {
+	Create(sprint *model.Sprint) error
+	FindByID(sprintID uint) (*model.Sprint, error)
+	FindAllByProject(projectID uint) ([]model.Sprint, error)
+	Update(sprint *model.Sprint) error
+	Delete(sprintID uint) error
+}

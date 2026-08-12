@@ -37,18 +37,21 @@ func TestMain(m *testing.M) {
 	memberRepo := repository.NewProjectMemberRepository(db)
 	epicRepo := repository.NewEpicRepository(db)
 	milestoneRepo := repository.NewMilestoneRepository(db)
+	sprintRepo := repository.NewSprintRepository(db)
 
 	authService := service.NewAuthService(userRepo)
 	taskService := service.NewTaskService(taskRepo, memberRepo)
 	projectService := service.NewProjectService(projectRepo, memberRepo, userRepo)
 	epicService := service.NewEpicService(epicRepo, memberRepo)
 	milestoneService := service.NewMilestoneService(milestoneRepo, memberRepo)
+	sprintService := service.NewSprintService(sprintRepo, memberRepo)
 
 	authHandler := handler.NewAuthHandler(authService)
 	taskHandler := handler.NewTaskHandler(taskService)
 	projectHandler := handler.NewProjectHandler(projectService)
 	epicHandler := handler.NewEpicHandler(epicService)
 	milestoneHandler := handler.NewMilestoneHandler(milestoneService)
+	sprintHandler := handler.NewSprintHandler(sprintService)
 
 	app = fiber.New(fiber.Config{
 		ErrorHandler: func(c fiber.Ctx, err error) error {
@@ -59,7 +62,7 @@ func TestMain(m *testing.M) {
 		},
 	})
 
-	v1.SetupRoutes(app, authHandler, taskHandler, projectHandler, epicHandler, milestoneHandler, false)
+	v1.SetupRoutes(app, authHandler, taskHandler, projectHandler, epicHandler, milestoneHandler, sprintHandler,false)
 
 	code := m.Run()
 	os.Exit(code)
@@ -81,7 +84,7 @@ func cleanTables() {
 		return
 	}
 
-	if err := db.Exec("TRUNCATE TABLE milestones, epics, project_members, tasks, projects, users RESTART IDENTITY CASCADE").Error; err != nil {
+	if err := db.Exec("TRUNCATE TABLE sprints, milestones, epics, project_members, tasks, projects, users RESTART IDENTITY CASCADE").Error; err != nil {
 		panic(err)
 	}
 }

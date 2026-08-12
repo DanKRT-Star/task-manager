@@ -28,6 +28,7 @@ type Task struct {
 	ProjectID   *uint      `gorm:"index" json:"projectId,omitempty"`
 	EpicID      *uint      `gorm:"index" json:"epicId,omitempty"`
 	MilestoneID *uint      `gorm:"index" json:"milestoneId,omitempty"`
+	SprintID    *uint      `gorm:"index" json:"sprintId,omitempty"`
 	UserID      uint       `gorm:"index;not null" json:"userId"`
 	AssigneeID  *uint      `gorm:"index" json:"assigneeId,omitempty"`
 	Deadline    time.Time  `json:"deadline"`

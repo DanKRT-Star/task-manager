@@ -203,3 +203,36 @@ func (m *MockMilestoneRepository) Delete(milestoneID uint) error {
 	args := m.Called(milestoneID)
 	return args.Error(0)
 }
+
+// MockSprintRepository giả lập SprintRepositoryInterface
+type MockSprintRepository struct {
+	mock.Mock
+}
+
+func (m *MockSprintRepository) Create(sprint *model.Sprint) error {
+	args := m.Called(sprint)
+	return args.Error(0)
+}
+
+func (m *MockSprintRepository) FindByID(sprintID uint) (*model.Sprint, error) {
+	args := m.Called(sprintID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*model.Sprint), args.Error(1)
+}
+
+func (m *MockSprintRepository) FindAllByProject(projectID uint) ([]model.Sprint, error) {
+	args := m.Called(projectID)
+	return args.Get(0).([]model.Sprint), args.Error(1)
+}
+
+func (m *MockSprintRepository) Update(sprint *model.Sprint) error {
+	args := m.Called(sprint)
+	return args.Error(0)
+}
+
+func (m *MockSprintRepository) Delete(sprintID uint) error {
+	args := m.Called(sprintID)
+	return args.Error(0)
+}

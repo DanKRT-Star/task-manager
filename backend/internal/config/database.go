@@ -40,6 +40,7 @@ func InitSchema() error {
 		&model.ProjectMember{},
 		&model.Epic{},
 		&model.Milestone{},
+		&model.Sprint{},
 	)
 }
 
@@ -48,7 +49,7 @@ func ResetDatabase() error {
 		return fmt.Errorf("database is not initialized")
 	}
 
-	if err := DB.Exec("DROP TABLE IF EXISTS milestones, epics, project_members, tasks, projects, users CASCADE").Error; err != nil {
+	if err := DB.Exec("DROP TABLE IF EXISTS sprints, milestones, epics, project_members, tasks, projects, users CASCADE").Error; err != nil {
 		return err
 	}
 

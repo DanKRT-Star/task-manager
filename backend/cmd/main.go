@@ -47,18 +47,21 @@ func main() {
 	memberRepo := repository.NewProjectMemberRepository(config.DB)
 	epicRepo := repository.NewEpicRepository(config.DB)
 	milestoneRepo := repository.NewMilestoneRepository(config.DB)
+	sprintRepo := repository.NewSprintRepository(config.DB)
 
 	authService := service.NewAuthService(userRepo)
 	taskService := service.NewTaskService(taskRepo, memberRepo)
 	projectService := service.NewProjectService(projectRepo, memberRepo, userRepo)
 	epicService := service.NewEpicService(epicRepo, memberRepo)
 	milestoneService := service.NewMilestoneService(milestoneRepo, memberRepo)
+	sprintService := service.NewSprintService(sprintRepo, memberRepo)
 
 	authHandler := handler.NewAuthHandler(authService)
 	taskHandler := handler.NewTaskHandler(taskService)
 	projectHandler := handler.NewProjectHandler(projectService)
 	epicHandler := handler.NewEpicHandler(epicService)
 	milestoneHandler := handler.NewMilestoneHandler(milestoneService)
+	sprintHandler := handler.NewSprintHandler(sprintService)
 
 	app := fiber.New(fiber.Config{
 		ErrorHandler: func(c fiber.Ctx, err error) error {
@@ -90,7 +93,7 @@ func main() {
 
 	app.Get("/swagger/*", swaggo.New(swaggo.Config{}))
 
-	v1.SetupRoutes(app, authHandler, taskHandler, projectHandler, epicHandler, milestoneHandler, true)
+	v1.SetupRoutes(app, authHandler, taskHandler, projectHandler, epicHandler, milestoneHandler, sprintHandler, true)
 
 	port := os.Getenv("PORT")
 	if port == "" {

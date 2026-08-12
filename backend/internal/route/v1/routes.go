@@ -16,6 +16,7 @@ func SetupRoutes(
 	projectHandler *handler.ProjectHandler,
 	epicHandler *handler.EpicHandler,
 	milestoneHandler *handler.MilestoneHandler,
+	sprintHandler *handler.SprintHandler,
 	enableRateLimit bool,
 ) {
 	api := app.Group("/api/v1")
@@ -44,6 +45,10 @@ func SetupRoutes(
 	milestones := api.Group("/milestones", middleware.AuthRequired)
 	milestones.Put("/:milestoneId", milestoneHandler.UpdateMilestone)
 	milestones.Delete("/:milestoneId", milestoneHandler.DeleteMilestone)
+
+	sprints := api.Group("/sprints", middleware.AuthRequired)
+	sprints.Put("/:sprintId", sprintHandler.UpdateSprint)
+	sprints.Delete("/:sprintId", sprintHandler.DeleteSprint)
 
 	projects := api.Group("/projects", middleware.AuthRequired)
 	projects.Post("/", projectHandler.CreateProject)

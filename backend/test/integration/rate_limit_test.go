@@ -23,14 +23,20 @@ func TestIntegration_RateLimit_AuthLogin(t *testing.T) {
 	taskRepo := repository.NewTaskRepository(db)
 	projectRepo := repository.NewProjectRepository(db)
 	memberRepo := repository.NewProjectMemberRepository(db)
+	epicRepo := repository.NewEpicRepository(db)
+	milestoneRepo := repository.NewMilestoneRepository(db)
 
 	authService := service.NewAuthService(userRepo)
 	taskService := service.NewTaskService(taskRepo, memberRepo)
 	projectService := service.NewProjectService(projectRepo, memberRepo, userRepo)
+	epicService := service.NewEpicService(epicRepo, memberRepo)
+	milestoneService := service.NewMilestoneService(milestoneRepo, memberRepo)
 
 	authHandler := handler.NewAuthHandler(authService)
 	taskHandler := handler.NewTaskHandler(taskService)
 	projectHandler := handler.NewProjectHandler(projectService)
+	epicHandler := handler.NewEpicHandler(epicService)
+	milestoneHandler := handler.NewMilestoneHandler(milestoneService)
 
 	rateLimitedApp := fiber.New(fiber.Config{
 		ErrorHandler: func(c fiber.Ctx, err error) error {
@@ -40,7 +46,7 @@ func TestIntegration_RateLimit_AuthLogin(t *testing.T) {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "internal server error"})
 		},
 	})
-	v1.SetupRoutes(rateLimitedApp, authHandler, taskHandler, projectHandler, true)
+	v1.SetupRoutes(rateLimitedApp, authHandler, taskHandler, projectHandler, epicHandler, milestoneHandler, true)
 
 	loginBody := map[string]string{
 		"email":    "ratelimit@example.com",

@@ -137,3 +137,69 @@ func (m *MockProjectRepository) Delete(projectID uint) error {
 	args := m.Called(projectID)
 	return args.Error(0)
 }
+
+// MockEpicRepository giả lập EpicRepositoryInterface
+type MockEpicRepository struct {
+	mock.Mock
+}
+
+func (m *MockEpicRepository) Create(epic *model.Epic) error {
+	args := m.Called(epic)
+	return args.Error(0)
+}
+
+func (m *MockEpicRepository) FindByID(epicID uint) (*model.Epic, error) {
+	args := m.Called(epicID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*model.Epic), args.Error(1)
+}
+
+func (m *MockEpicRepository) FindAllByProject(projectID uint) ([]model.Epic, error) {
+	args := m.Called(projectID)
+	return args.Get(0).([]model.Epic), args.Error(1)
+}
+
+func (m *MockEpicRepository) Update(epic *model.Epic) error {
+	args := m.Called(epic)
+	return args.Error(0)
+}
+
+func (m *MockEpicRepository) Delete(epicID uint) error {
+	args := m.Called(epicID)
+	return args.Error(0)
+}
+
+// MockMilestoneRepository giả lập MilestoneRepositoryInterface
+type MockMilestoneRepository struct {
+	mock.Mock
+}
+
+func (m *MockMilestoneRepository) Create(milestone *model.Milestone) error {
+	args := m.Called(milestone)
+	return args.Error(0)
+}
+
+func (m *MockMilestoneRepository) FindByID(milestoneID uint) (*model.Milestone, error) {
+	args := m.Called(milestoneID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*model.Milestone), args.Error(1)
+}
+
+func (m *MockMilestoneRepository) FindAllByProject(projectID uint) ([]model.Milestone, error) {
+	args := m.Called(projectID)
+	return args.Get(0).([]model.Milestone), args.Error(1)
+}
+
+func (m *MockMilestoneRepository) Update(milestone *model.Milestone) error {
+	args := m.Called(milestone)
+	return args.Error(0)
+}
+
+func (m *MockMilestoneRepository) Delete(milestoneID uint) error {
+	args := m.Called(milestoneID)
+	return args.Error(0)
+}

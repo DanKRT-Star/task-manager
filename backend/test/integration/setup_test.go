@@ -10,7 +10,6 @@ import (
 	"github.com/DanKRT-Star/task-manager/internal/apperror"
 	"github.com/DanKRT-Star/task-manager/internal/config"
 	"github.com/DanKRT-Star/task-manager/internal/handler"
-	"github.com/DanKRT-Star/task-manager/internal/model"
 	"github.com/DanKRT-Star/task-manager/internal/repository"
 	v1 "github.com/DanKRT-Star/task-manager/internal/route/v1"
 	"github.com/DanKRT-Star/task-manager/internal/service"
@@ -30,24 +29,26 @@ func TestMain(m *testing.M) {
 	config.ConnectDatabase()
 	db = config.DB
 
-	db.Exec("DROP TABLE IF EXISTS project_members, tasks, projects, users CASCADE")
-	db.AutoMigrate(&model.User{})
-	db.AutoMigrate(&model.Project{})
-	db.AutoMigrate(&model.Task{})
-	db.AutoMigrate(&model.ProjectMember{})
+	resetDatabase()
 
 	userRepo := repository.NewUserRepository(db)
 	taskRepo := repository.NewTaskRepository(db)
 	projectRepo := repository.NewProjectRepository(db)
 	memberRepo := repository.NewProjectMemberRepository(db)
+	epicRepo := repository.NewEpicRepository(db)
+	milestoneRepo := repository.NewMilestoneRepository(db)
 
 	authService := service.NewAuthService(userRepo)
 	taskService := service.NewTaskService(taskRepo, memberRepo)
 	projectService := service.NewProjectService(projectRepo, memberRepo, userRepo)
+	epicService := service.NewEpicService(epicRepo, memberRepo)
+	milestoneService := service.NewMilestoneService(milestoneRepo, memberRepo)
 
 	authHandler := handler.NewAuthHandler(authService)
 	taskHandler := handler.NewTaskHandler(taskService)
 	projectHandler := handler.NewProjectHandler(projectService)
+	epicHandler := handler.NewEpicHandler(epicService)
+	milestoneHandler := handler.NewMilestoneHandler(milestoneService)
 
 	app = fiber.New(fiber.Config{
 		ErrorHandler: func(c fiber.Ctx, err error) error {
@@ -58,15 +59,31 @@ func TestMain(m *testing.M) {
 		},
 	})
 
-	v1.SetupRoutes(app, authHandler, taskHandler, projectHandler, false)
+	v1.SetupRoutes(app, authHandler, taskHandler, projectHandler, epicHandler, milestoneHandler, false)
 
 	code := m.Run()
 	os.Exit(code)
 }
 
-// cleanTables xóa sạch data giữa các test case để đảm bảo tính độc lập
+func resetDatabase() {
+	if db == nil {
+		return
+	}
+
+	if err := config.ResetDatabase(); err != nil {
+		panic(err)
+	}
+}
+
+// cleanTables xóa dữ liệu giữa các test case nhưng giữ nguyên schema để chạy nhanh hơn.
 func cleanTables() {
-	db.Exec("TRUNCATE TABLE project_members, tasks, projects, users RESTART IDENTITY CASCADE")
+	if db == nil {
+		return
+	}
+
+	if err := db.Exec("TRUNCATE TABLE milestones, epics, project_members, tasks, projects, users RESTART IDENTITY CASCADE").Error; err != nil {
+		panic(err)
+	}
 }
 
 // registerAndGetToken helper dùng chung cho các file test khác trong package

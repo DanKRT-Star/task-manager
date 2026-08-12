@@ -8,7 +8,6 @@ import (
 	apperror "github.com/DanKRT-Star/task-manager/internal/apperror"
 	"github.com/DanKRT-Star/task-manager/internal/config"
 	"github.com/DanKRT-Star/task-manager/internal/handler"
-	"github.com/DanKRT-Star/task-manager/internal/model"
 	"github.com/DanKRT-Star/task-manager/internal/repository"
 	v1 "github.com/DanKRT-Star/task-manager/internal/route/v1"
 	"github.com/DanKRT-Star/task-manager/internal/service"
@@ -33,35 +32,34 @@ import (
 // @description                 Type "Bearer" followed by a space and the JWT token.
 
 func main() {
-	// Load biến môi trường từ file .env
 	if err := godotenv.Load(); err != nil {
 		log.Println("No .env file found, using system environment variables")
 	}
 
-	// Kết nối database
 	config.ConnectDatabase()
+	if err := config.InitSchema(); err != nil {
+		log.Fatal("Failed to initialize database schema: ", err)
+	}
 
-	// Tự động tạo bảng theo model
-	config.DB.AutoMigrate(&model.User{})
-	config.DB.AutoMigrate(&model.Project{})
-	config.DB.AutoMigrate(&model.Task{})
-	config.DB.AutoMigrate(&model.ProjectMember{})
-
-	// Wiring: repository -> service -> handler
 	userRepo := repository.NewUserRepository(config.DB)
 	taskRepo := repository.NewTaskRepository(config.DB)
 	projectRepo := repository.NewProjectRepository(config.DB)
 	memberRepo := repository.NewProjectMemberRepository(config.DB)
+	epicRepo := repository.NewEpicRepository(config.DB)
+	milestoneRepo := repository.NewMilestoneRepository(config.DB)
 
 	authService := service.NewAuthService(userRepo)
 	taskService := service.NewTaskService(taskRepo, memberRepo)
 	projectService := service.NewProjectService(projectRepo, memberRepo, userRepo)
+	epicService := service.NewEpicService(epicRepo, memberRepo)
+	milestoneService := service.NewMilestoneService(milestoneRepo, memberRepo)
 
 	authHandler := handler.NewAuthHandler(authService)
 	taskHandler := handler.NewTaskHandler(taskService)
 	projectHandler := handler.NewProjectHandler(projectService)
+	epicHandler := handler.NewEpicHandler(epicService)
+	milestoneHandler := handler.NewMilestoneHandler(milestoneService)
 
-	// Khởi tạo Fiber app
 	app := fiber.New(fiber.Config{
 		ErrorHandler: func(c fiber.Ctx, err error) error {
 			if appErr, ok := err.(*apperror.AppError); ok {
@@ -71,40 +69,28 @@ func main() {
 		},
 	})
 
-	// Cấu hình CORS để cho phép truy cập từ frontend
 	app.Use(cors.New(cors.Config{
 		AllowOrigins: []string{"http://localhost:5173", "http://localhost:3001", "https://task-manager-phi-one-73.vercel.app"},
 		AllowHeaders: []string{"Origin", "Content-Type", "Accept", "Authorization"},
 		AllowMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 	}))
 
-	// Giới hạn chung cho toàn bộ API — chống spam/DDoS cơ bản
 	app.Use(limiter.New(limiter.Config{
 		Max:        100,
 		Expiration: 1 * time.Minute,
 	}))
 
-	// Route test kiểm tra server sống
 	app.Get("/health", func(c fiber.Ctx) error {
 		sqlDB, err := config.DB.DB()
 		if err != nil || sqlDB.Ping() != nil {
-			return c.Status(503).JSON(fiber.Map{
-				"status":   "error",
-				"database": "unreachable",
-			})
+			return c.Status(503).JSON(fiber.Map{"status": "error", "database": "unreachable"})
 		}
-
-		return c.JSON(fiber.Map{
-			"status":  "ok",
-			"message": "Server is running",
-		})
+		return c.JSON(fiber.Map{"status": "ok", "message": "Server is running"})
 	})
 
-	// Route Swagger
 	app.Get("/swagger/*", swaggo.New(swaggo.Config{}))
 
-	// Đăng ký toàn bộ route API v1
-	v1.SetupRoutes(app, authHandler, taskHandler, projectHandler, true)
+	v1.SetupRoutes(app, authHandler, taskHandler, projectHandler, epicHandler, milestoneHandler, true)
 
 	port := os.Getenv("PORT")
 	if port == "" {

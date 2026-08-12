@@ -7,6 +7,32 @@ definitions:
     required:
     - email
     type: object
+  dto.CreateEpicRequest:
+    properties:
+      description:
+        maxLength: 1000
+        type: string
+      title:
+        maxLength: 200
+        minLength: 1
+        type: string
+    required:
+    - title
+    type: object
+  dto.CreateMilestoneRequest:
+    properties:
+      description:
+        maxLength: 1000
+        type: string
+      dueDate:
+        type: string
+      title:
+        maxLength: 200
+        minLength: 1
+        type: string
+    required:
+    - title
+    type: object
   dto.CreateProjectRequest:
     properties:
       deadline:
@@ -86,6 +112,28 @@ definitions:
       total:
         type: integer
     type: object
+  dto.UpdateEpicRequest:
+    properties:
+      description:
+        maxLength: 1000
+        type: string
+      title:
+        maxLength: 200
+        minLength: 1
+        type: string
+    type: object
+  dto.UpdateMilestoneRequest:
+    properties:
+      description:
+        maxLength: 1000
+        type: string
+      dueDate:
+        type: string
+      title:
+        maxLength: 200
+        minLength: 1
+        type: string
+    type: object
   dto.UpdateProjectRequest:
     properties:
       deadline:
@@ -112,6 +160,38 @@ definitions:
       title:
         maxLength: 200
         minLength: 1
+        type: string
+    type: object
+  model.Epic:
+    properties:
+      createdAt:
+        type: string
+      description:
+        type: string
+      epicId:
+        type: integer
+      projectId:
+        type: integer
+      title:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  model.Milestone:
+    properties:
+      createdAt:
+        type: string
+      description:
+        type: string
+      dueDate:
+        type: string
+      milestoneId:
+        type: integer
+      projectId:
+        type: integer
+      title:
+        type: string
+      updatedAt:
         type: string
     type: object
   model.Project:
@@ -172,6 +252,10 @@ definitions:
         type: string
       description:
         type: string
+      epicId:
+        type: integer
+      milestoneId:
+        type: integer
       projectId:
         type: integer
       status:
@@ -313,6 +397,130 @@ paths:
       summary: Register a new user
       tags:
       - auth
+  /epics/{epicId}:
+    delete:
+      description: Only the project owner can delete an epic
+      parameters:
+      - description: Epic ID
+        in: path
+        name: epicId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: message
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: not found, or not the owner
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete an epic
+      tags:
+      - epics
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Epic ID
+        in: path
+        name: epicId
+        required: true
+        type: integer
+      - description: Fields to update
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateEpicRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Epic'
+        "400":
+          description: validation error, not found, or access denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update an epic
+      tags:
+      - epics
+  /milestones/{milestoneId}:
+    delete:
+      description: Only the project owner can delete a milestone
+      parameters:
+      - description: Milestone ID
+        in: path
+        name: milestoneId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: message
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: not found, or not the owner
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a milestone
+      tags:
+      - milestones
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Milestone ID
+        in: path
+        name: milestoneId
+        required: true
+        type: integer
+      - description: Fields to update
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateMilestoneRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Milestone'
+        "400":
+          description: validation error, not found, or access denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update a milestone
+      tags:
+      - milestones
   /projects:
     get:
       description: Get all projects the authenticated user is a member or owner of
@@ -480,6 +688,68 @@ paths:
       summary: Update a project
       tags:
       - projects
+  /projects/{id}/epics:
+    get:
+      parameters:
+      - description: Project ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'data: array of epics'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: invalid id or access denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List epics in a project
+      tags:
+      - epics
+    post:
+      consumes:
+      - application/json
+      description: Create a new epic within a project; requester must be a project
+        member
+      parameters:
+      - description: Project ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Epic payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateEpicRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.Epic'
+        "400":
+          description: validation error or access denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create an epic
+      tags:
+      - epics
   /projects/{id}/members:
     get:
       description: Get all members of a project; the requester must be a member of
@@ -598,6 +868,68 @@ paths:
       summary: Remove a project member
       tags:
       - projects
+  /projects/{id}/milestones:
+    get:
+      parameters:
+      - description: Project ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'data: array of milestones'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: invalid id or access denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List milestones in a project
+      tags:
+      - milestones
+    post:
+      consumes:
+      - application/json
+      description: Create a new milestone within a project; requester must be a project
+        member
+      parameters:
+      - description: Project ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Milestone payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateMilestoneRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.Milestone'
+        "400":
+          description: validation error or access denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a milestone
+      tags:
+      - milestones
   /projects/{id}/tasks:
     get:
       description: Get a paginated list of tasks belonging to a project; the requester

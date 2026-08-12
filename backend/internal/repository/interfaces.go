@@ -32,3 +32,19 @@ type ProjectMemberRepositoryInterface interface {
 	FindMembersByProject(projectID uint) ([]model.ProjectMember, error)
 	RemoveMember(projectID, userID uint) error
 }
+
+type EpicRepositoryInterface interface {
+	Create(epic *model.Epic) error
+	FindByID(epicID uint) (*model.Epic, error)
+	FindAllByProject(projectID uint) ([]model.Epic, error)
+	Update(epic *model.Epic) error
+	Delete(epicID uint) error
+}
+
+type MilestoneRepositoryInterface interface {
+	Create(milestone *model.Milestone) error
+	FindByID(milestoneID uint) (*model.Milestone, error)
+	FindAllByProject(projectID uint) ([]model.Milestone, error)
+	Update(milestone *model.Milestone) error
+	Delete(milestoneID uint) error
+}

@@ -9,7 +9,15 @@ import (
 	"github.com/gofiber/fiber/v3/middleware/limiter"
 )
 
-func SetupRoutes(app *fiber.App, authHandler *handler.AuthHandler, taskHandler *handler.TaskHandler, projectHandler *handler.ProjectHandler, enableRateLimit bool) {
+func SetupRoutes(
+	app *fiber.App,
+	authHandler *handler.AuthHandler,
+	taskHandler *handler.TaskHandler,
+	projectHandler *handler.ProjectHandler,
+	epicHandler *handler.EpicHandler,
+	milestoneHandler *handler.MilestoneHandler,
+	enableRateLimit bool,
+) {
 	api := app.Group("/api/v1")
 
 	auth := api.Group("/auth")
@@ -29,6 +37,14 @@ func SetupRoutes(app *fiber.App, authHandler *handler.AuthHandler, taskHandler *
 	tasks.Put("/:id", taskHandler.UpdateTask)
 	tasks.Delete("/:id", taskHandler.DeleteTask)
 
+	epics := api.Group("/epics", middleware.AuthRequired)
+	epics.Put("/:epicId", epicHandler.UpdateEpic)
+	epics.Delete("/:epicId", epicHandler.DeleteEpic)
+
+	milestones := api.Group("/milestones", middleware.AuthRequired)
+	milestones.Put("/:milestoneId", milestoneHandler.UpdateMilestone)
+	milestones.Delete("/:milestoneId", milestoneHandler.DeleteMilestone)
+
 	projects := api.Group("/projects", middleware.AuthRequired)
 	projects.Post("/", projectHandler.CreateProject)
 	projects.Get("/", projectHandler.GetProjects)
@@ -39,4 +55,8 @@ func SetupRoutes(app *fiber.App, authHandler *handler.AuthHandler, taskHandler *
 	projects.Get("/:id/members", projectHandler.GetMembers)
 	projects.Post("/:id/members", projectHandler.AddMember)
 	projects.Delete("/:id/members/:userId", projectHandler.RemoveMember)
+	projects.Post("/:id/epics", epicHandler.CreateEpic)
+	projects.Get("/:id/epics", epicHandler.GetProjectEpics)
+	projects.Post("/:id/milestones", milestoneHandler.CreateMilestone)
+	projects.Get("/:id/milestones", milestoneHandler.GetProjectMilestones)
 }

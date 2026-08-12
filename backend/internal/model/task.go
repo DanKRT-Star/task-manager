@@ -25,8 +25,10 @@ type Task struct {
 	Title       string     `gorm:"not null" json:"title"`
 	Description string     `json:"description"`
 	Status      TaskStatus `gorm:"type:varchar(20);default:'pending';check:status IN ('pending','in_progress','done')" json:"status"`
-	UserID      uint       `gorm:"index;not null" json:"userId"`
 	ProjectID   *uint      `gorm:"index" json:"projectId,omitempty"`
+	EpicID      *uint      `gorm:"index" json:"epicId,omitempty"`
+	MilestoneID *uint      `gorm:"index" json:"milestoneId,omitempty"`
+	UserID      uint       `gorm:"index;not null" json:"userId"`
 	AssigneeID  *uint      `gorm:"index" json:"assigneeId,omitempty"`
 	Deadline    time.Time  `json:"deadline"`
 	CreatedAt   time.Time  `json:"createdAt"`

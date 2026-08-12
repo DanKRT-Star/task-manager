@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestIntegration_Register(t *testing.T) {
+func TestIntegration_Auth_Register(t *testing.T) {
 	tests := []struct {
 		name           string
 		body           interface{}
@@ -76,7 +76,7 @@ func TestIntegration_Register(t *testing.T) {
 	}
 }
 
-func TestIntegration_Register_DuplicateEmail(t *testing.T) {
+func TestIntegration_Auth_RegisterDuplicateEmail(t *testing.T) {
 	cleanTables()
 
 	body := map[string]string{
@@ -99,7 +99,7 @@ func TestIntegration_Register_DuplicateEmail(t *testing.T) {
 	assert.Equal(t, 400, resp2.StatusCode)
 }
 
-func TestIntegration_Login(t *testing.T) {
+func TestIntegration_Auth_Login(t *testing.T) {
 	cleanTables()
 
 	registerBody := map[string]string{
@@ -156,7 +156,7 @@ func TestIntegration_Login(t *testing.T) {
 	}
 }
 
-func TestIntegration_Login_MissingFields(t *testing.T) {
+func TestIntegration_Auth_LoginMissingFields(t *testing.T) {
 	cleanTables()
 
 	tests := []struct {
@@ -198,7 +198,7 @@ func TestIntegration_Login_MissingFields(t *testing.T) {
 	}
 }
 
-func TestIntegration_GetMe(t *testing.T) {
+func TestIntegration_Auth_GetMe(t *testing.T) {
 	cleanTables()
 
 	token := registerAndGetToken(t, "me@example.com", "correctpassword")

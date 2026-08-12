@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestIntegration_CreateProject(t *testing.T) {
+func TestIntegration_Project_Create(t *testing.T) {
 	cleanTables()
 	token := registerAndGetToken(t, "projectcreator@example.com", "12345678")
 
@@ -46,7 +46,7 @@ func TestIntegration_CreateProject(t *testing.T) {
 	}
 }
 
-func TestIntegration_GetProjects_OnlyShowsUsersOwnProjects(t *testing.T) {
+func TestIntegration_Project_GetProjectsOnlyShowsOwnProjects(t *testing.T) {
 	cleanTables()
 	tokenA := registerAndGetToken(t, "projA@example.com", "12345678")
 	tokenB := registerAndGetToken(t, "projB@example.com", "12345678")
@@ -210,7 +210,7 @@ func TestIntegration_Project_OnlyOwnerCanManage(t *testing.T) {
 	})
 }
 
-func TestIntegration_CreateTask_InProject_MemberAssignment(t *testing.T) {
+func TestIntegration_Task_CreateInProject_AssigneeRules(t *testing.T) {
 	cleanTables()
 	ownerToken := registerAndGetToken(t, "taskowner@example.com", "12345678")
 	memberToken := registerAndGetToken(t, "taskmember@example.com", "12345678")

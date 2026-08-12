@@ -7,11 +7,12 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/DanKRT-Star/task-manager/internal/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestIntegration_CreateTask(t *testing.T) {
+func TestIntegration_Task_Create(t *testing.T) {
 	cleanTables()
 	token := registerAndGetToken(t, "creator@example.com", "12345678")
 
@@ -73,7 +74,96 @@ func TestIntegration_CreateTask(t *testing.T) {
 	}
 }
 
-func TestIntegration_GetTasks_FilterSortPaginate(t *testing.T) {
+func TestIntegration_Task_ActivityLog(t *testing.T) {
+	tests := []struct {
+		name   string
+		setup  func(t *testing.T) (token string, taskID uint)
+		action func(t *testing.T, token string, taskID uint)
+		assert func(t *testing.T, taskID uint)
+	}{
+		{
+			name: "create task logs created action",
+			setup: func(t *testing.T) (string, uint) {
+				cleanTables()
+				token := registerAndGetToken(t, "activitylog_create@example.com", "12345678")
+				body := map[string]string{"title": "Activity log task", "deadline": "2026-08-15T17:00:00Z"}
+				jsonBody, _ := json.Marshal(body)
+				req := httptest.NewRequest("POST", "/api/v1/tasks", bytes.NewReader(jsonBody))
+				req.Header.Set("Content-Type", "application/json")
+				req.Header.Set("Authorization", "Bearer "+token)
+				resp, err := app.Test(req)
+				require.NoError(t, err)
+				require.Equal(t, 201, resp.StatusCode)
+
+				var created struct {
+					TaskID uint `json:"taskId"`
+				}
+				require.NoError(t, json.NewDecoder(resp.Body).Decode(&created))
+				return token, created.TaskID
+			},
+			action: func(t *testing.T, token string, taskID uint) {},
+			assert: func(t *testing.T, taskID uint) {
+				var logs []model.ActivityLog
+				require.NoError(t, db.Where("task_id = ?", taskID).Order("created_at desc").Find(&logs).Error)
+				require.NotEmpty(t, logs)
+				assert.Equal(t, model.ActionCreated, logs[0].Action)
+				assert.Equal(t, "Task created", logs[0].Detail)
+			},
+		},
+		{
+			name: "update task status logs status change",
+			setup: func(t *testing.T) (string, uint) {
+				cleanTables()
+				token := registerAndGetToken(t, "activitylog_update@example.com", "12345678")
+				body := map[string]string{"title": "Activity log task", "deadline": "2026-08-15T17:00:00Z"}
+				jsonBody, _ := json.Marshal(body)
+				req := httptest.NewRequest("POST", "/api/v1/tasks", bytes.NewReader(jsonBody))
+				req.Header.Set("Content-Type", "application/json")
+				req.Header.Set("Authorization", "Bearer "+token)
+				resp, err := app.Test(req)
+				require.NoError(t, err)
+				require.Equal(t, 201, resp.StatusCode)
+
+				var created struct {
+					TaskID uint `json:"taskId"`
+				}
+				require.NoError(t, json.NewDecoder(resp.Body).Decode(&created))
+				return token, created.TaskID
+			},
+			action: func(t *testing.T, token string, taskID uint) {
+				body := map[string]string{"status": "done"}
+				jsonBody, _ := json.Marshal(body)
+				req := httptest.NewRequest("PUT", "/api/v1/tasks/"+strconv.Itoa(int(taskID)), bytes.NewReader(jsonBody))
+				req.Header.Set("Content-Type", "application/json")
+				req.Header.Set("Authorization", "Bearer "+token)
+				resp, err := app.Test(req)
+				require.NoError(t, err)
+				require.Equal(t, 200, resp.StatusCode)
+			},
+			assert: func(t *testing.T, taskID uint) {
+				var logs []model.ActivityLog
+				require.NoError(t, db.Where("task_id = ?", taskID).Order("created_at desc").Find(&logs).Error)
+				require.GreaterOrEqual(t, len(logs), 2)
+				assert.Contains(t, []model.ActivityAction{logs[0].Action, logs[1].Action}, model.ActionStatusChanged)
+				assert.Contains(t, []string{logs[0].Detail, logs[1].Detail}, "Status changed from pending to done")
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			token, taskID := tt.setup(t)
+			if tt.action != nil {
+				tt.action(t, token, taskID)
+			}
+			if tt.assert != nil {
+				tt.assert(t, taskID)
+			}
+		})
+	}
+}
+
+func TestIntegration_Task_Get_FilterSortPaginate(t *testing.T) {
 	cleanTables()
 	token := registerAndGetToken(t, "lister@example.com", "12345678")
 
@@ -131,7 +221,7 @@ func TestIntegration_GetTasks_FilterSortPaginate(t *testing.T) {
 	}
 }
 
-func TestIntegration_Task_CannotAccessOtherUsersTask(t *testing.T) {
+func TestIntegration_Task_CannotAccessOtherUsers(t *testing.T) {
 	cleanTables()
 
 	tokenA := registerAndGetToken(t, "userA@example.com", "12345678")
@@ -205,7 +295,7 @@ func TestIntegration_Task_CannotAccessOtherUsersTask(t *testing.T) {
 	}
 }
 
-func TestIntegration_UpdateTask(t *testing.T) {
+func TestIntegration_Task_Update(t *testing.T) {
 	cleanTables()
 	token := registerAndGetToken(t, "updater@example.com", "12345678")
 
@@ -296,7 +386,7 @@ func TestIntegration_UpdateTask(t *testing.T) {
 	}
 }
 
-func TestIntegration_DeleteTask(t *testing.T) {
+func TestIntegration_Task_Delete(t *testing.T) {
 	cleanTables()
 	token := registerAndGetToken(t, "deleter@example.com", "12345678")
 
@@ -355,71 +445,102 @@ func TestIntegration_DeleteTask(t *testing.T) {
 	}
 }
 
-func TestIntegration_GetTasks_Sort(t *testing.T) {
-	cleanTables()
-	token := registerAndGetToken(t, "sorter@example.com", "12345678")
-
-	seedTasks := []map[string]string{
-		{"title": "Deadline sớm nhất", "deadline": "2026-08-05T00:00:00Z"},
-		{"title": "Deadline trễ nhất", "deadline": "2026-08-25T00:00:00Z"},
-		{"title": "Deadline giữa", "deadline": "2026-08-15T00:00:00Z"},
+func TestIntegration_Task_Get_Sort(t *testing.T) {
+	tests := []struct {
+		name          string
+		query         string
+		expectedTitle string
+		seedTasks     []map[string]string
+	}{
+		{
+			name:          "sort ascending by default",
+			query:         "/api/v1/tasks?page=1&limit=10",
+			expectedTitle: "Deadline sớm nhất",
+			seedTasks: []map[string]string{
+				{"title": "Deadline sớm nhất", "deadline": "2026-08-05T00:00:00Z"},
+				{"title": "Deadline trễ nhất", "deadline": "2026-08-25T00:00:00Z"},
+				{"title": "Deadline giữa", "deadline": "2026-08-15T00:00:00Z"},
+			},
+		},
+		{
+			name:          "sort descending",
+			query:         "/api/v1/tasks?sort=deadline_desc&page=1&limit=10",
+			expectedTitle: "Deadline trễ nhất",
+			seedTasks: []map[string]string{
+				{"title": "Deadline sớm nhất", "deadline": "2026-08-05T00:00:00Z"},
+				{"title": "Deadline trễ nhất", "deadline": "2026-08-25T00:00:00Z"},
+				{"title": "Deadline giữa", "deadline": "2026-08-15T00:00:00Z"},
+			},
+		},
 	}
-	for _, task := range seedTasks {
-		jsonBody, _ := json.Marshal(task)
-		req := httptest.NewRequest("POST", "/api/v1/tasks", bytes.NewReader(jsonBody))
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", "Bearer "+token)
-		app.Test(req)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cleanTables()
+			var email string
+			if tt.name == "sort ascending by default" {
+				email = "sorterasc@example.com"
+			} else {
+				email = "sorterdesc@example.com"
+			}
+			token := registerAndGetToken(t, email, "12345678")
+			for _, task := range tt.seedTasks {
+				jsonBody, _ := json.Marshal(task)
+				req := httptest.NewRequest("POST", "/api/v1/tasks", bytes.NewReader(jsonBody))
+				req.Header.Set("Content-Type", "application/json")
+				req.Header.Set("Authorization", "Bearer "+token)
+				_, err := app.Test(req)
+				require.NoError(t, err)
+			}
+
+			req := httptest.NewRequest("GET", tt.query, nil)
+			req.Header.Set("Authorization", "Bearer "+token)
+
+			resp, err := app.Test(req)
+			require.NoError(t, err)
+			assert.Equal(t, 200, resp.StatusCode)
+
+			var body struct {
+				Data []struct {
+					Title string `json:"title"`
+				} `json:"data"`
+			}
+			json.NewDecoder(resp.Body).Decode(&body)
+			require.Len(t, body.Data, 3)
+			assert.Equal(t, tt.expectedTitle, body.Data[0].Title)
+		})
 	}
-
-	t.Run("sort ascending by default", func(t *testing.T) {
-		req := httptest.NewRequest("GET", "/api/v1/tasks?page=1&limit=10", nil)
-		req.Header.Set("Authorization", "Bearer "+token)
-
-		resp, err := app.Test(req)
-		require.NoError(t, err)
-		assert.Equal(t, 200, resp.StatusCode)
-
-		var body struct {
-			Data []struct {
-				Title string `json:"title"`
-			} `json:"data"`
-		}
-		json.NewDecoder(resp.Body).Decode(&body)
-		require.Len(t, body.Data, 3)
-		assert.Equal(t, "Deadline sớm nhất", body.Data[0].Title)
-	})
-
-	t.Run("sort descending", func(t *testing.T) {
-		req := httptest.NewRequest("GET", "/api/v1/tasks?sort=deadline_desc&page=1&limit=10", nil)
-		req.Header.Set("Authorization", "Bearer "+token)
-
-		resp, err := app.Test(req)
-		require.NoError(t, err)
-		assert.Equal(t, 200, resp.StatusCode)
-
-		var body struct {
-			Data []struct {
-				Title string `json:"title"`
-			} `json:"data"`
-		}
-		json.NewDecoder(resp.Body).Decode(&body)
-		require.Len(t, body.Data, 3)
-		assert.Equal(t, "Deadline trễ nhất", body.Data[0].Title)
-	})
 }
 
-func TestIntegration_GetTasks_NoToken(t *testing.T) {
-	cleanTables()
+func TestIntegration_Task_Get_NoToken(t *testing.T) {
+	tests := []struct {
+		name           string
+		authHeader     string
+		expectedStatus int
+	}{
+		{
+			name:           "no token",
+			authHeader:     "",
+			expectedStatus: 401,
+		},
+	}
 
-	req := httptest.NewRequest("GET", "/api/v1/tasks", nil)
-	resp, err := app.Test(req)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cleanTables()
+			req := httptest.NewRequest("GET", "/api/v1/tasks", nil)
+			if tt.authHeader != "" {
+				req.Header.Set("Authorization", tt.authHeader)
+			}
 
-	require.NoError(t, err)
-	assert.Equal(t, 401, resp.StatusCode)
+			resp, err := app.Test(req)
+			require.NoError(t, err)
+			assert.Equal(t, tt.expectedStatus, resp.StatusCode)
+		})
+	}
 }
 
-func TestIntegration_GetTasks_MalformedToken(t *testing.T) {
+func TestIntegration_Task_Get_MalformedToken(t *testing.T) {
 	cleanTables()
 
 	tests := []struct {
@@ -456,73 +577,105 @@ func TestIntegration_GetTasks_MalformedToken(t *testing.T) {
 	}
 }
 
-func TestIntegration_GetTasks_UserIsolation(t *testing.T) {
-	cleanTables()
-
-	tokenA := registerAndGetToken(t, "isolationA@example.com", "12345678")
-	tokenB := registerAndGetToken(t, "isolationB@example.com", "12345678")
-
-	// User A tạo 2 task
-	for _, title := range []string{"A's task 1", "A's task 2"} {
-		body := map[string]string{"title": title, "deadline": "2026-08-15T17:00:00Z"}
-		jsonBody, _ := json.Marshal(body)
-		req := httptest.NewRequest("POST", "/api/v1/tasks", bytes.NewReader(jsonBody))
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", "Bearer "+tokenA)
-		app.Test(req)
+func TestIntegration_Task_Get_UserIsolation(t *testing.T) {
+	tests := []struct {
+		name          string
+		setup         func(t *testing.T) (tokenA, tokenB string)
+		expectedTotal int64
+		expectedTitle string
+	}{
+		{
+			name: "user b only sees own tasks",
+			setup: func(t *testing.T) (string, string) {
+				tokenA := registerAndGetToken(t, "isolationA@example.com", "12345678")
+				tokenB := registerAndGetToken(t, "isolationB@example.com", "12345678")
+				for _, title := range []string{"A's task 1", "A's task 2"} {
+					body := map[string]string{"title": title, "deadline": "2026-08-15T17:00:00Z"}
+					jsonBody, _ := json.Marshal(body)
+					req := httptest.NewRequest("POST", "/api/v1/tasks", bytes.NewReader(jsonBody))
+					req.Header.Set("Content-Type", "application/json")
+					req.Header.Set("Authorization", "Bearer "+tokenA)
+					_, err := app.Test(req)
+					require.NoError(t, err)
+				}
+				bodyB := map[string]string{"title": "B's task", "deadline": "2026-08-15T17:00:00Z"}
+				jsonBodyB, _ := json.Marshal(bodyB)
+				reqB := httptest.NewRequest("POST", "/api/v1/tasks", bytes.NewReader(jsonBodyB))
+				reqB.Header.Set("Content-Type", "application/json")
+				reqB.Header.Set("Authorization", "Bearer "+tokenB)
+				_, err := app.Test(reqB)
+				require.NoError(t, err)
+				return tokenA, tokenB
+			},
+			expectedTotal: 1,
+			expectedTitle: "B's task",
+		},
 	}
 
-	// User B tạo 1 task
-	bodyB := map[string]string{"title": "B's task", "deadline": "2026-08-15T17:00:00Z"}
-	jsonBodyB, _ := json.Marshal(bodyB)
-	reqB := httptest.NewRequest("POST", "/api/v1/tasks", bytes.NewReader(jsonBodyB))
-	reqB.Header.Set("Content-Type", "application/json")
-	reqB.Header.Set("Authorization", "Bearer "+tokenB)
-	app.Test(reqB)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cleanTables()
+			_, tokenB := tt.setup(t)
+			req := httptest.NewRequest("GET", "/api/v1/tasks?page=1&limit=10", nil)
+			req.Header.Set("Authorization", "Bearer "+tokenB)
 
-	// User B gọi GetTasks -> chỉ được thấy đúng 1 task của mình, không lẫn task của A
-	req := httptest.NewRequest("GET", "/api/v1/tasks?page=1&limit=10", nil)
-	req.Header.Set("Authorization", "Bearer "+tokenB)
+			resp, err := app.Test(req)
+			require.NoError(t, err)
+			assert.Equal(t, 200, resp.StatusCode)
 
-	resp, err := app.Test(req)
-	require.NoError(t, err)
-	assert.Equal(t, 200, resp.StatusCode)
+			var body struct {
+				Data []struct {
+					Title string `json:"title"`
+				} `json:"data"`
+				Total int64 `json:"total"`
+			}
+			json.NewDecoder(resp.Body).Decode(&body)
 
-	var body struct {
-		Data []struct {
-			Title string `json:"title"`
-		} `json:"data"`
-		Total int64 `json:"total"`
+			assert.Equal(t, tt.expectedTotal, body.Total)
+			require.Len(t, body.Data, 1)
+			assert.Equal(t, tt.expectedTitle, body.Data[0].Title)
+		})
 	}
-	json.NewDecoder(resp.Body).Decode(&body)
-
-	assert.Equal(t, int64(1), body.Total)
-	require.Len(t, body.Data, 1)
-	assert.Equal(t, "B's task", body.Data[0].Title)
 }
 
-func TestIntegration_GetTasks_EmptyList(t *testing.T) {
-	cleanTables()
-	token := registerAndGetToken(t, "emptylist@example.com", "12345678")
-
-	req := httptest.NewRequest("GET", "/api/v1/tasks?page=1&limit=10", nil)
-	req.Header.Set("Authorization", "Bearer "+token)
-
-	resp, err := app.Test(req)
-	require.NoError(t, err)
-	assert.Equal(t, 200, resp.StatusCode)
-
-	var body struct {
-		Data  []interface{} `json:"data"`
-		Total int64         `json:"total"`
+func TestIntegration_Task_Get_EmptyList(t *testing.T) {
+	tests := []struct {
+		name           string
+		expectedTotal  int64
+		expectedLength int
+	}{
+		{
+			name:           "empty list for new user",
+			expectedTotal:  0,
+			expectedLength: 0,
+		},
 	}
-	json.NewDecoder(resp.Body).Decode(&body)
 
-	assert.Equal(t, int64(0), body.Total)
-	assert.Empty(t, body.Data)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cleanTables()
+			token := registerAndGetToken(t, "emptylist@example.com", "12345678")
+
+			req := httptest.NewRequest("GET", "/api/v1/tasks?page=1&limit=10", nil)
+			req.Header.Set("Authorization", "Bearer "+token)
+
+			resp, err := app.Test(req)
+			require.NoError(t, err)
+			assert.Equal(t, 200, resp.StatusCode)
+
+			var body struct {
+				Data  []interface{} `json:"data"`
+				Total int64         `json:"total"`
+			}
+			json.NewDecoder(resp.Body).Decode(&body)
+
+			assert.Equal(t, tt.expectedTotal, body.Total)
+			assert.Len(t, body.Data, tt.expectedLength)
+		})
+	}
 }
 
-func TestIntegration_GetTasks_PaginationEdgeCases(t *testing.T) {
+func TestIntegration_Task_Get_PaginationEdgeCases(t *testing.T) {
 	cleanTables()
 	token := registerAndGetToken(t, "paginationedge@example.com", "12345678")
 

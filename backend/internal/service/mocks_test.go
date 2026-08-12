@@ -222,6 +222,77 @@ func (m *MockMilestoneRepository) Delete(milestoneID uint) error {
 	return args.Error(0)
 }
 
+// MockCommentRepository giả lập CommentRepositoryInterface
+type MockCommentRepository struct {
+	mock.Mock
+}
+
+func (m *MockCommentRepository) Create(comment *model.Comment) error {
+	args := m.Called(comment)
+	return args.Error(0)
+}
+
+func (m *MockCommentRepository) FindByID(commentID uint) (*model.Comment, error) {
+	args := m.Called(commentID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*model.Comment), args.Error(1)
+}
+
+func (m *MockCommentRepository) FindAllByTask(taskID uint) ([]model.Comment, error) {
+	args := m.Called(taskID)
+	return args.Get(0).([]model.Comment), args.Error(1)
+}
+
+func (m *MockCommentRepository) Delete(commentID uint) error {
+	args := m.Called(commentID)
+	return args.Error(0)
+}
+
+// MockLabelRepository giả lập LabelRepositoryInterface
+type MockLabelRepository struct {
+	mock.Mock
+}
+
+func (m *MockLabelRepository) Create(label *model.Label) error {
+	args := m.Called(label)
+	return args.Error(0)
+}
+
+func (m *MockLabelRepository) FindByID(labelID uint) (*model.Label, error) {
+	args := m.Called(labelID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*model.Label), args.Error(1)
+}
+
+func (m *MockLabelRepository) FindAllByProject(projectID uint) ([]model.Label, error) {
+	args := m.Called(projectID)
+	return args.Get(0).([]model.Label), args.Error(1)
+}
+
+func (m *MockLabelRepository) Delete(labelID uint) error {
+	args := m.Called(labelID)
+	return args.Error(0)
+}
+
+func (m *MockLabelRepository) AttachToTask(taskID, labelID uint) error {
+	args := m.Called(taskID, labelID)
+	return args.Error(0)
+}
+
+func (m *MockLabelRepository) DetachFromTask(taskID, labelID uint) error {
+	args := m.Called(taskID, labelID)
+	return args.Error(0)
+}
+
+func (m *MockLabelRepository) FindLabelsByTask(taskID uint) ([]model.Label, error) {
+	args := m.Called(taskID)
+	return args.Get(0).([]model.Label), args.Error(1)
+}
+
 // MockSprintRepository giả lập SprintRepositoryInterface
 type MockSprintRepository struct {
 	mock.Mock

@@ -117,6 +117,7 @@ func (s *TaskService) UpdateTask(taskID, userID uint, title, description string,
 		return nil, errors.New("you do not have permission to modify this task")
 	}
 
+	oldStatus := task.Status
 	if title != "" {
 		task.Title = title
 	}
@@ -150,13 +151,12 @@ func (s *TaskService) UpdateTask(taskID, userID uint, title, description string,
 		return nil, err
 	}
 
-	if status != "" && status != task.Status {
-		// ghi log TRƯỚC khi gán status mới, để so sánh đúng giá trị cũ/mới
+	if status != "" && status != oldStatus {
 		s.ActivityRepo.Create(&model.ActivityLog{
 			TaskID: task.TaskID,
 			UserID: userID,
 			Action: model.ActionStatusChanged,
-			Detail: "Status changed from " + string(task.Status) + " to " + string(status),
+			Detail: "Status changed from " + string(oldStatus) + " to " + string(status),
 		})
 	}
 	return task, nil

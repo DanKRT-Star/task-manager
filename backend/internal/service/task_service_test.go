@@ -8,6 +8,45 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
+func TestTaskService_ActivityLog(t *testing.T) {
+	t.Run("create task logs created action", func(t *testing.T) {
+		mockRepo := new(MockTaskRepository)
+		mockMemberRepo := new(MockProjectMemberRepository)
+		mockActivityRepo := new(MockActivityLogRepository)
+
+		mockRepo.On("Create", mock.AnythingOfType("*model.Task")).Return(nil)
+		mockActivityRepo.On("Create", mock.MatchedBy(func(log *model.ActivityLog) bool {
+			return log.Action == model.ActionCreated && log.Detail == "Task created"
+		})).Return(nil)
+
+		taskService := NewTaskService(mockRepo, mockMemberRepo, mockActivityRepo)
+		task, err := taskService.CreateTask(1, "Build API", "desc", model.StatusPending, "", nil, nil)
+
+		assert.NoError(t, err)
+		assert.NotNil(t, task)
+	})
+
+	t.Run("update task status logs status change", func(t *testing.T) {
+		mockRepo := new(MockTaskRepository)
+		mockMemberRepo := new(MockProjectMemberRepository)
+		mockActivityRepo := new(MockActivityLogRepository)
+
+		existing := &model.Task{TaskID: 1, UserID: 1, ProjectID: nil, Status: model.StatusPending}
+		mockRepo.On("FindByIDOnly", uint(1)).Return(existing, nil)
+		mockRepo.On("Update", mock.AnythingOfType("*model.Task")).Return(nil)
+		mockActivityRepo.On("Create", mock.MatchedBy(func(log *model.ActivityLog) bool {
+			return log.TaskID == 1 && log.UserID == 1 && log.Action == model.ActionStatusChanged && log.Detail == "Status changed from pending to done"
+		})).Return(nil)
+
+		taskService := NewTaskService(mockRepo, mockMemberRepo, mockActivityRepo)
+		updated, err := taskService.UpdateTask(1, 1, "", "", model.StatusDone, "", nil)
+
+		assert.NoError(t, err)
+		assert.NotNil(t, updated)
+		assert.Equal(t, model.StatusDone, updated.Status)
+	})
+}
+
 func TestTaskService_CreateTask(t *testing.T) {
 	tests := []struct {
 		name        string

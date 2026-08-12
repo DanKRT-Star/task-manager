@@ -56,3 +56,25 @@ type SprintRepositoryInterface interface {
 	Update(sprint *model.Sprint) error
 	Delete(sprintID uint) error
 }
+
+type CommentRepositoryInterface interface {
+	Create(comment *model.Comment) error
+	FindByID(commentID uint) (*model.Comment, error)
+	FindAllByTask(taskID uint) ([]model.Comment, error)
+	Delete(commentID uint) error
+}
+
+type LabelRepositoryInterface interface {
+	Create(label *model.Label) error
+	FindByID(labelID uint) (*model.Label, error)
+	FindAllByProject(projectID uint) ([]model.Label, error)
+	Delete(labelID uint) error
+	AttachToTask(taskID, labelID uint) error
+	DetachFromTask(taskID, labelID uint) error
+	FindLabelsByTask(taskID uint) ([]model.Label, error)
+}
+
+type ActivityLogRepositoryInterface interface {
+	Create(log *model.ActivityLog) error
+	FindAllByTask(taskID uint) ([]model.ActivityLog, error)
+}

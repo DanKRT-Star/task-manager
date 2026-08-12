@@ -45,16 +45,21 @@ func main() {
 	taskRepo := repository.NewTaskRepository(config.DB)
 	projectRepo := repository.NewProjectRepository(config.DB)
 	memberRepo := repository.NewProjectMemberRepository(config.DB)
+	commentRepo := repository.NewCommentRepository(config.DB)
+	labelRepo := repository.NewLabelRepository(config.DB)
+	activityRepo := repository.NewActivityLogRepository(config.DB)
 	epicRepo := repository.NewEpicRepository(config.DB)
 	milestoneRepo := repository.NewMilestoneRepository(config.DB)
 	sprintRepo := repository.NewSprintRepository(config.DB)
 
 	authService := service.NewAuthService(userRepo)
-	taskService := service.NewTaskService(taskRepo, memberRepo)
+	taskService := service.NewTaskService(taskRepo, memberRepo, activityRepo)
 	projectService := service.NewProjectService(projectRepo, memberRepo, userRepo)
 	epicService := service.NewEpicService(epicRepo, memberRepo)
 	milestoneService := service.NewMilestoneService(milestoneRepo, memberRepo)
 	sprintService := service.NewSprintService(sprintRepo, memberRepo)
+	commentService := service.NewCommentService(commentRepo, taskRepo, memberRepo)
+	labelService := service.NewLabelService(labelRepo, taskRepo, memberRepo)
 
 	authHandler := handler.NewAuthHandler(authService)
 	taskHandler := handler.NewTaskHandler(taskService)
@@ -62,6 +67,8 @@ func main() {
 	epicHandler := handler.NewEpicHandler(epicService)
 	milestoneHandler := handler.NewMilestoneHandler(milestoneService)
 	sprintHandler := handler.NewSprintHandler(sprintService)
+	commentHandler := handler.NewCommentHandler(commentService)
+	labelHandler := handler.NewLabelHandler(labelService)
 
 	app := fiber.New(fiber.Config{
 		ErrorHandler: func(c fiber.Ctx, err error) error {
@@ -93,7 +100,7 @@ func main() {
 
 	app.Get("/swagger/*", swaggo.New(swaggo.Config{}))
 
-	v1.SetupRoutes(app, authHandler, taskHandler, projectHandler, epicHandler, milestoneHandler, sprintHandler, true)
+	v1.SetupRoutes(app, authHandler, taskHandler, projectHandler, epicHandler, milestoneHandler, sprintHandler, commentHandler, labelHandler, true)
 
 	port := os.Getenv("PORT")
 	if port == "" {

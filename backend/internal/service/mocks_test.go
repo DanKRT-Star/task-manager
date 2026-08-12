@@ -77,6 +77,24 @@ func (m *MockTaskRepository) Delete(taskID uint) error {
 	return args.Error(0)
 }
 
+// MockActivityLogRepository giả lập ActivityLogRepositoryInterface
+type MockActivityLogRepository struct {
+	mock.Mock
+}
+
+func (m *MockActivityLogRepository) Create(log *model.ActivityLog) error {
+	args := m.Called(log)
+	return args.Error(0)
+}
+
+func (m *MockActivityLogRepository) FindAllByTask(taskID uint) ([]model.ActivityLog, error) {
+	args := m.Called(taskID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]model.ActivityLog), args.Error(1)
+}
+
 // MockProjectMemberRepository giả lập ProjectMemberRepositoryInterface
 type MockProjectMemberRepository struct {
 	mock.Mock

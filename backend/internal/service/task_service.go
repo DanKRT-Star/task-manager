@@ -9,12 +9,13 @@ import (
 )
 
 type TaskService struct {
-	TaskRepo   repository.TaskRepositoryInterface
-	MemberRepo repository.ProjectMemberRepositoryInterface
+	TaskRepo     repository.TaskRepositoryInterface
+	MemberRepo   repository.ProjectMemberRepositoryInterface
+	ActivityRepo repository.ActivityLogRepositoryInterface
 }
 
-func NewTaskService(taskRepo repository.TaskRepositoryInterface, memberRepo repository.ProjectMemberRepositoryInterface) *TaskService {
-	return &TaskService{TaskRepo: taskRepo, MemberRepo: memberRepo}
+func NewTaskService(taskRepo repository.TaskRepositoryInterface, memberRepo repository.ProjectMemberRepositoryInterface, activityRepo repository.ActivityLogRepositoryInterface) *TaskService {
+	return &TaskService{TaskRepo: taskRepo, MemberRepo: memberRepo, ActivityRepo: activityRepo}
 }
 
 func (s *TaskService) CreateTask(userID uint, title, description string, status model.TaskStatus, deadlineStr string, projectID, assigneeID *uint) (*model.Task, error) {
@@ -65,6 +66,14 @@ func (s *TaskService) CreateTask(userID uint, title, description string, status 
 	if err := s.TaskRepo.Create(task); err != nil {
 		return nil, err
 	}
+
+	s.ActivityRepo.Create(&model.ActivityLog{
+		TaskID: task.TaskID,
+		UserID: userID,
+		Action: model.ActionCreated,
+		Detail: "Task created",
+	})
+
 	return task, nil
 }
 
@@ -139,6 +148,16 @@ func (s *TaskService) UpdateTask(taskID, userID uint, title, description string,
 
 	if err := s.TaskRepo.Update(task); err != nil {
 		return nil, err
+	}
+
+	if status != "" && status != task.Status {
+		// ghi log TRƯỚC khi gán status mới, để so sánh đúng giá trị cũ/mới
+		s.ActivityRepo.Create(&model.ActivityLog{
+			TaskID: task.TaskID,
+			UserID: userID,
+			Action: model.ActionStatusChanged,
+			Detail: "Status changed from " + string(task.Status) + " to " + string(status),
+		})
 	}
 	return task, nil
 }

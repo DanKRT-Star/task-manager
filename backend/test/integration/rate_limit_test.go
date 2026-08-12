@@ -23,16 +23,21 @@ func TestIntegration_RateLimit_AuthLogin(t *testing.T) {
 	taskRepo := repository.NewTaskRepository(db)
 	projectRepo := repository.NewProjectRepository(db)
 	memberRepo := repository.NewProjectMemberRepository(db)
+	activityRepo := repository.NewActivityLogRepository(db)
 	epicRepo := repository.NewEpicRepository(db)
 	milestoneRepo := repository.NewMilestoneRepository(db)
 	sprintRepo := repository.NewSprintRepository(db)
+	commentRepo := repository.NewCommentRepository(db)
+	labelRepo := repository.NewLabelRepository(db)
 
 	authService := service.NewAuthService(userRepo)
-	taskService := service.NewTaskService(taskRepo, memberRepo)
+	taskService := service.NewTaskService(taskRepo, memberRepo, activityRepo)
 	projectService := service.NewProjectService(projectRepo, memberRepo, userRepo)
 	epicService := service.NewEpicService(epicRepo, memberRepo)
 	milestoneService := service.NewMilestoneService(milestoneRepo, memberRepo)
 	sprintService := service.NewSprintService(sprintRepo, memberRepo)
+	commentService := service.NewCommentService(commentRepo, taskRepo, memberRepo)
+	labelService := service.NewLabelService(labelRepo, taskRepo, memberRepo)
 
 	authHandler := handler.NewAuthHandler(authService)
 	taskHandler := handler.NewTaskHandler(taskService)
@@ -40,6 +45,8 @@ func TestIntegration_RateLimit_AuthLogin(t *testing.T) {
 	epicHandler := handler.NewEpicHandler(epicService)
 	milestoneHandler := handler.NewMilestoneHandler(milestoneService)
 	sprintHandler := handler.NewSprintHandler(sprintService)
+	commentHandler := handler.NewCommentHandler(commentService)
+	labelHandler := handler.NewLabelHandler(labelService)
 
 	rateLimitedApp := fiber.New(fiber.Config{
 		ErrorHandler: func(c fiber.Ctx, err error) error {
@@ -49,7 +56,7 @@ func TestIntegration_RateLimit_AuthLogin(t *testing.T) {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "internal server error"})
 		},
 	})
-	v1.SetupRoutes(rateLimitedApp, authHandler, taskHandler, projectHandler, epicHandler, milestoneHandler, sprintHandler,true)
+	v1.SetupRoutes(rateLimitedApp, authHandler, taskHandler, projectHandler, epicHandler, milestoneHandler, sprintHandler, commentHandler, labelHandler, true)
 
 	loginBody := map[string]string{
 		"email":    "ratelimit@example.com",

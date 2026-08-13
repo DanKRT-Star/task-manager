@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 
+	"github.com/DanKRT-Star/task-manager/internal/logger"
 	"github.com/DanKRT-Star/task-manager/internal/model"
 	"github.com/DanKRT-Star/task-manager/internal/repository"
 )
@@ -17,7 +18,6 @@ func NewCommentService(commentRepo repository.CommentRepositoryInterface, taskRe
 	return &CommentService{CommentRepo: commentRepo, TaskRepo: taskRepo, MemberRepo: memberRepo}
 }
 
-// canAccessTask kiểm tra user có quyền xem/bình luận task này không
 func (s *CommentService) canAccessTask(userID uint, task *model.Task) bool {
 	if task.ProjectID == nil {
 		return task.UserID == userID
@@ -28,43 +28,61 @@ func (s *CommentService) canAccessTask(userID uint, task *model.Task) bool {
 
 func (s *CommentService) CreateComment(userID, taskID uint, content string) (*model.Comment, error) {
 	if content == "" {
+		logger.CommentEmptyContent(userID, taskID)
 		return nil, errors.New("content is required")
 	}
 
 	task, err := s.TaskRepo.FindByIDOnly(taskID)
 	if err != nil {
+		logger.CommentTaskNotFound(taskID, userID)
 		return nil, errors.New("task not found")
 	}
 	if !s.canAccessTask(userID, task) {
+		logger.CommentTaskAccessDenied(userID, taskID)
 		return nil, errors.New("you do not have access to this task")
 	}
 
 	comment := &model.Comment{TaskID: taskID, UserID: userID, Content: content}
 	if err := s.CommentRepo.Create(comment); err != nil {
+		logger.CommentCreateFailed(taskID, userID, err)
 		return nil, err
 	}
+	logger.CommentCreated(comment.CommentID, taskID, userID)
 	return comment, nil
 }
 
 func (s *CommentService) GetTaskComments(userID, taskID uint) ([]model.Comment, error) {
 	task, err := s.TaskRepo.FindByIDOnly(taskID)
 	if err != nil {
+		logger.CommentTaskNotFound(taskID, userID)
 		return nil, errors.New("task not found")
 	}
 	if !s.canAccessTask(userID, task) {
+		logger.CommentTaskAccessDenied(userID, taskID)
 		return nil, errors.New("you do not have access to this task")
 	}
-	return s.CommentRepo.FindAllByTask(taskID)
+	comments, err := s.CommentRepo.FindAllByTask(taskID)
+	if err != nil {
+		logger.CommentFetchFailed(taskID, err)
+		return nil, err
+	}
+	return comments, nil
 }
 
 func (s *CommentService) DeleteComment(userID, commentID uint) error {
 	comment, err := s.CommentRepo.FindByID(commentID)
 	if err != nil {
+		logger.CommentNotFound(commentID, userID)
 		return errors.New("comment not found")
 	}
-	// Chỉ tác giả bình luận mới xóa được - không phụ thuộc vào role trong project
 	if comment.UserID != userID {
+		logger.CommentDeleteForbidden(commentID, userID, comment.UserID)
 		return errors.New("you can only delete your own comments")
 	}
-	return s.CommentRepo.Delete(commentID)
+	if err := s.CommentRepo.Delete(commentID); err != nil {
+		logger.CommentDeleteFailed(commentID, userID, err)
+		return err
+	}
+	logger.CommentDeleted(commentID, userID)
+	return nil
 }

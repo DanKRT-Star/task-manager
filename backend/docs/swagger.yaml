@@ -7,6 +7,15 @@ definitions:
     required:
     - email
     type: object
+  dto.CreateCommentRequest:
+    properties:
+      content:
+        maxLength: 2000
+        minLength: 1
+        type: string
+    required:
+    - content
+    type: object
   dto.CreateEpicRequest:
     properties:
       description:
@@ -18,6 +27,17 @@ definitions:
         type: string
     required:
     - title
+    type: object
+  dto.CreateLabelRequest:
+    properties:
+      color:
+        type: string
+      name:
+        maxLength: 50
+        minLength: 1
+        type: string
+    required:
+    - name
     type: object
   dto.CreateMilestoneRequest:
     properties:
@@ -43,6 +63,19 @@ definitions:
       name:
         maxLength: 200
         minLength: 1
+        type: string
+    required:
+    - name
+    type: object
+  dto.CreateSprintRequest:
+    properties:
+      endDate:
+        type: string
+      name:
+        maxLength: 200
+        minLength: 1
+        type: string
+      startDate:
         type: string
     required:
     - name
@@ -146,6 +179,19 @@ definitions:
         minLength: 1
         type: string
     type: object
+  dto.UpdateSprintRequest:
+    properties:
+      endDate:
+        type: string
+      name:
+        maxLength: 200
+        minLength: 1
+        type: string
+      startDate:
+        type: string
+      status:
+        $ref: '#/definitions/model.SprintStatus'
+    type: object
   dto.UpdateTaskRequest:
     properties:
       assigneeId:
@@ -162,6 +208,21 @@ definitions:
         minLength: 1
         type: string
     type: object
+  model.Comment:
+    properties:
+      commentId:
+        type: integer
+      content:
+        type: string
+      createdAt:
+        type: string
+      taskId:
+        type: integer
+      updatedAt:
+        type: string
+      userId:
+        type: integer
+    type: object
   model.Epic:
     properties:
       createdAt:
@@ -176,6 +237,19 @@ definitions:
         type: string
       updatedAt:
         type: string
+    type: object
+  model.Label:
+    properties:
+      color:
+        type: string
+      createdAt:
+        type: string
+      labelId:
+        type: integer
+      name:
+        type: string
+      projectId:
+        type: integer
     type: object
   model.Milestone:
     properties:
@@ -242,6 +316,35 @@ definitions:
     x-enum-varnames:
     - RoleOwner
     - RoleMember
+  model.Sprint:
+    properties:
+      createdAt:
+        type: string
+      endDate:
+        type: string
+      name:
+        type: string
+      projectId:
+        type: integer
+      sprintId:
+        type: integer
+      startDate:
+        type: string
+      status:
+        $ref: '#/definitions/model.SprintStatus'
+      updatedAt:
+        type: string
+    type: object
+  model.SprintStatus:
+    enum:
+    - planned
+    - active
+    - completed
+    type: string
+    x-enum-varnames:
+    - SprintPlanned
+    - SprintActive
+    - SprintCompleted
   model.Task:
     properties:
       assigneeId:
@@ -257,6 +360,8 @@ definitions:
       milestoneId:
         type: integer
       projectId:
+        type: integer
+      sprintId:
         type: integer
       status:
         $ref: '#/definitions/model.TaskStatus'
@@ -397,6 +502,35 @@ paths:
       summary: Register a new user
       tags:
       - auth
+  /comments/{commentId}:
+    delete:
+      description: Only the comment author can delete it
+      parameters:
+      - description: Comment ID
+        in: path
+        name: commentId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: message
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: not found or not the author
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a comment
+      tags:
+      - comments
   /epics/{epicId}:
     delete:
       description: Only the project owner can delete an epic
@@ -459,6 +593,29 @@ paths:
       summary: Update an epic
       tags:
       - epics
+  /labels/{labelId}:
+    delete:
+      description: Only the project owner can delete a label
+      parameters:
+      - description: Label ID
+        in: path
+        name: labelId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: message
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a label
+      tags:
+      - labels
   /milestones/{milestoneId}:
     delete:
       description: Only the project owner can delete a milestone
@@ -750,6 +907,60 @@ paths:
       summary: Create an epic
       tags:
       - epics
+  /projects/{id}/labels:
+    get:
+      parameters:
+      - description: Project ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'data: array of labels'
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List project labels
+      tags:
+      - labels
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Label payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateLabelRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.Label'
+        "400":
+          description: validation error or access denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a label
+      tags:
+      - labels
   /projects/{id}/members:
     get:
       description: Get all members of a project; the requester must be a member of
@@ -930,6 +1141,68 @@ paths:
       summary: Create a milestone
       tags:
       - milestones
+  /projects/{id}/sprints:
+    get:
+      parameters:
+      - description: Project ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'data: array of sprints'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: invalid id or access denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List sprints in a project
+      tags:
+      - sprints
+    post:
+      consumes:
+      - application/json
+      description: Create a new sprint within a project; requester must be a project
+        member
+      parameters:
+      - description: Project ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Sprint payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateSprintRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.Sprint'
+        "400":
+          description: validation error or access denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a sprint
+      tags:
+      - sprints
   /projects/{id}/tasks:
     get:
       description: Get a paginated list of tasks belonging to a project; the requester
@@ -989,6 +1262,69 @@ paths:
       summary: List tasks in a project
       tags:
       - tasks
+  /sprints/{sprintId}:
+    delete:
+      description: Only the project owner can delete a sprint
+      parameters:
+      - description: Sprint ID
+        in: path
+        name: sprintId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: message
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: not found, or not the owner
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a sprint
+      tags:
+      - sprints
+    put:
+      consumes:
+      - application/json
+      description: Update sprint details including status transitions (planned/active/completed)
+      parameters:
+      - description: Sprint ID
+        in: path
+        name: sprintId
+        required: true
+        type: integer
+      - description: Fields to update
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateSprintRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Sprint'
+        "400":
+          description: validation error, not found, or access denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update a sprint
+      tags:
+      - sprints
   /tasks:
     get:
       description: Get a paginated list of tasks for the authenticated user, with
@@ -1148,6 +1484,170 @@ paths:
       summary: Update a task
       tags:
       - tasks
+  /tasks/{taskId}/activity:
+    get:
+      description: Get the change history of a task (created, status changes, etc.);
+        requester must have access to the task
+      parameters:
+      - description: Task ID
+        in: path
+        name: taskId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'data: array of activity logs'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: invalid id or access denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get task activity history
+      tags:
+      - activity
+  /tasks/{taskId}/comments:
+    get:
+      parameters:
+      - description: Task ID
+        in: path
+        name: taskId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'data: array of comments'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: invalid id or access denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List task comments
+      tags:
+      - comments
+    post:
+      consumes:
+      - application/json
+      description: Add a comment to a task; requester must have access to the task
+      parameters:
+      - description: Task ID
+        in: path
+        name: taskId
+        required: true
+        type: integer
+      - description: Comment payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateCommentRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.Comment'
+        "400":
+          description: validation error or access denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a comment
+      tags:
+      - comments
+  /tasks/{taskId}/labels:
+    get:
+      parameters:
+      - description: Task ID
+        in: path
+        name: taskId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'data: array of labels'
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List labels attached to a task
+      tags:
+      - labels
+  /tasks/{taskId}/labels/{labelId}:
+    delete:
+      parameters:
+      - description: Task ID
+        in: path
+        name: taskId
+        required: true
+        type: integer
+      - description: Label ID
+        in: path
+        name: labelId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: message
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Detach a label from a task
+      tags:
+      - labels
+    post:
+      parameters:
+      - description: Task ID
+        in: path
+        name: taskId
+        required: true
+        type: integer
+      - description: Label ID
+        in: path
+        name: labelId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: message
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Attach a label to a task
+      tags:
+      - labels
 securityDefinitions:
   BearerAuth:
     description: Type "Bearer" followed by a space and the JWT token.

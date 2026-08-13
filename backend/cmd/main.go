@@ -1,12 +1,12 @@
 package main
 
 import (
-	"log"
 	"os"
 	"time"
 
 	apperror "github.com/DanKRT-Star/task-manager/internal/apperror"
 	"github.com/DanKRT-Star/task-manager/internal/config"
+	"github.com/DanKRT-Star/task-manager/internal/logger"
 	"github.com/DanKRT-Star/task-manager/internal/handler"
 	"github.com/DanKRT-Star/task-manager/internal/repository"
 	v1 "github.com/DanKRT-Star/task-manager/internal/route/v1"
@@ -32,13 +32,15 @@ import (
 // @description                 Type "Bearer" followed by a space and the JWT token.
 
 func main() {
+	logger.Init()
+
 	if err := godotenv.Load(); err != nil {
-		log.Println("No .env file found, using system environment variables")
+		logger.Log.Info().Msg("No .env file found, using system environment variables")
 	}
 
 	config.ConnectDatabase()
 	if err := config.InitSchema(); err != nil {
-		log.Fatal("Failed to initialize database schema: ", err)
+		logger.Log.Fatal().Err(err).Msg("Failed to initialize database schema")
 	}
 
 	userRepo := repository.NewUserRepository(config.DB)
@@ -109,5 +111,8 @@ func main() {
 		port = "3000"
 	}
 
-	log.Fatal(app.Listen(":" + port))
+	logger.Log.Info().Str("port", port).Msg("Server starting")
+	if err := app.Listen(":" + port); err != nil {
+		logger.Log.Fatal().Err(err).Msg("Server failed to start")
+	}
 }

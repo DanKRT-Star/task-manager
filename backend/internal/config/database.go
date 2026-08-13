@@ -2,10 +2,10 @@ package config
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"strings"
 
+	"github.com/DanKRT-Star/task-manager/internal/logger"
 	"github.com/DanKRT-Star/task-manager/internal/model"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -16,15 +16,15 @@ var DB *gorm.DB
 func ConnectDatabase() {
 	dsn := strings.TrimSpace(os.Getenv("DATABASE_URL"))
 	if dsn == "" {
-		log.Fatal("DATABASE_URL environment variable is required")
+		logger.Log.Fatal().Str("event", "database_url_missing").Msg("DATABASE_URL environment variable is required")
 	}
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
-		log.Fatal("Failed to connect to database: ", err)
+		logger.Log.Fatal().Str("event", "database_connection_failed").Err(err).Msg("failed to connect to database")
 	}
 
-	log.Println("Database connected successfully")
+	logger.Log.Info().Str("event", "database_connected").Msg("database connected successfully")
 	DB = db
 }
 

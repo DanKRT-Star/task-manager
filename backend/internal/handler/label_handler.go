@@ -18,6 +18,17 @@ func NewLabelHandler(labelService *service.LabelService) *LabelHandler {
 	return &LabelHandler{LabelService: labelService}
 }
 
+// CreateLabel godoc
+// @Summary      Create a label
+// @Tags         labels
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id      path int true "Project ID"
+// @Param        request body dto.CreateLabelRequest true "Label payload"
+// @Success      201 {object} model.Label
+// @Failure      400 {object} map[string]string "validation error or access denied"
+// @Router       /projects/{id}/labels [post]
 func (h *LabelHandler) CreateLabel(c fiber.Ctx) error {
 	userID := c.Locals("userID").(uint)
 
@@ -42,6 +53,14 @@ func (h *LabelHandler) CreateLabel(c fiber.Ctx) error {
 	return c.Status(201).JSON(label)
 }
 
+// GetProjectLabels godoc
+// @Summary      List project labels
+// @Tags         labels
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id path int true "Project ID"
+// @Success      200 {object} map[string]interface{} "data: array of labels"
+// @Router       /projects/{id}/labels [get]
 func (h *LabelHandler) GetProjectLabels(c fiber.Ctx) error {
 	userID := c.Locals("userID").(uint)
 
@@ -58,6 +77,15 @@ func (h *LabelHandler) GetProjectLabels(c fiber.Ctx) error {
 	return c.JSON(fiber.Map{"data": labels})
 }
 
+// DeleteLabel godoc
+// @Summary      Delete a label
+// @Description  Only the project owner can delete a label
+// @Tags         labels
+// @Produce      json
+// @Security     BearerAuth
+// @Param        labelId path int true "Label ID"
+// @Success      200 {object} map[string]string "message"
+// @Router       /labels/{labelId} [delete]
 func (h *LabelHandler) DeleteLabel(c fiber.Ctx) error {
 	userID := c.Locals("userID").(uint)
 
@@ -73,6 +101,15 @@ func (h *LabelHandler) DeleteLabel(c fiber.Ctx) error {
 	return c.JSON(fiber.Map{"message": "label deleted successfully"})
 }
 
+// AttachLabel godoc
+// @Summary      Attach a label to a task
+// @Tags         labels
+// @Produce      json
+// @Security     BearerAuth
+// @Param        taskId  path int true "Task ID"
+// @Param        labelId path int true "Label ID"
+// @Success      200 {object} map[string]string "message"
+// @Router       /tasks/{taskId}/labels/{labelId} [post]
 func (h *LabelHandler) AttachLabel(c fiber.Ctx) error {
 	userID := c.Locals("userID").(uint)
 
@@ -92,6 +129,15 @@ func (h *LabelHandler) AttachLabel(c fiber.Ctx) error {
 	return c.JSON(fiber.Map{"message": "label attached successfully"})
 }
 
+// DetachLabel godoc
+// @Summary      Detach a label from a task
+// @Tags         labels
+// @Produce      json
+// @Security     BearerAuth
+// @Param        taskId  path int true "Task ID"
+// @Param        labelId path int true "Label ID"
+// @Success      200 {object} map[string]string "message"
+// @Router       /tasks/{taskId}/labels/{labelId} [delete]
 func (h *LabelHandler) DetachLabel(c fiber.Ctx) error {
 	userID := c.Locals("userID").(uint)
 
@@ -111,6 +157,14 @@ func (h *LabelHandler) DetachLabel(c fiber.Ctx) error {
 	return c.JSON(fiber.Map{"message": "label detached successfully"})
 }
 
+// GetTaskLabels godoc
+// @Summary      List labels attached to a task
+// @Tags         labels
+// @Produce      json
+// @Security     BearerAuth
+// @Param        taskId path int true "Task ID"
+// @Success      200 {object} map[string]interface{} "data: array of labels"
+// @Router       /tasks/{taskId}/labels [get]
 func (h *LabelHandler) GetTaskLabels(c fiber.Ctx) error {
 	userID := c.Locals("userID").(uint)
 

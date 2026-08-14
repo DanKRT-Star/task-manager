@@ -78,3 +78,9 @@ type ActivityLogRepositoryInterface interface {
 	Create(log *model.ActivityLog) error
 	FindAllByTask(taskID uint) ([]model.ActivityLog, error)
 }
+
+type RefreshTokenRepositoryInterface interface {
+	Create(token *model.RefreshToken) error
+	FindByHash(tokenHash string) (*model.RefreshToken, error)
+	Revoke(tokenID uint) error
+}

@@ -33,6 +33,8 @@ func SetupRoutes(
 	}
 	auth.Post("/register", authHandler.Register)
 	auth.Post("/login", authHandler.Login)
+	auth.Post("/refresh", authHandler.RefreshToken)
+	auth.Post("/logout", authHandler.Logout)
 	auth.Get("/me", middleware.AuthRequired, authHandler.GetMe)
 
 	tasks := api.Group("/tasks", middleware.AuthRequired)

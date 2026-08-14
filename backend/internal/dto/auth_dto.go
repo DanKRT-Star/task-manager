@@ -12,6 +12,20 @@ type LoginRequest struct {
 }
 
 type LoginResponse struct {
-	Message string `json:"message"`
-	Token   string `json:"token"`
+	Message      string `json:"message"`
+	AccessToken  string `json:"accessToken"`
+	RefreshToken string `json:"refreshToken"`
+}
+
+type RefreshTokenRequest struct {
+	RefreshToken string `json:"refreshToken" validate:"required"`
+}
+
+type RefreshTokenResponse struct {
+	AccessToken  string `json:"accessToken"`
+	RefreshToken string `json:"refreshToken"`
+}
+
+type LogoutRequest struct {
+	RefreshToken string `json:"refreshToken" validate:"required"`
 }

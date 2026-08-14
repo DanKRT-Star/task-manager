@@ -10,22 +10,22 @@ import (
 
 func TestAuthService_Register(t *testing.T) {
 	tests := []struct {
-		name          string
-		userName      string
-		email         string
-		password      string
-		existingUser  *model.User
-		findByEmailErr error
-		expectError   bool
+		name            string
+		userName        string
+		email           string
+		password        string
+		existingUser    *model.User
+		findByEmailErr  error
+		expectError     bool
 	}{
 		{
-			name:            "success - email not taken",
-			userName:        "Alice",
-			email:           "alice@example.com",
-			password:        "12345678",
-			existingUser:    nil,
-			findByEmailErr:  assert.AnError,
-			expectError:     false,
+			name:           "success - email not taken",
+			userName:       "Alice",
+			email:          "alice@example.com",
+			password:       "12345678",
+			existingUser:   nil,
+			findByEmailErr: assert.AnError,
+			expectError:    false,
 		},
 		{
 			name:           "fail - email already taken",
@@ -41,13 +41,14 @@ func TestAuthService_Register(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockRepo := new(MockUserRepository)
+			mockRefreshRepo := new(MockRefreshTokenRepository)
 			mockRepo.On("FindByEmail", tt.email).Return(tt.existingUser, tt.findByEmailErr)
 
 			if !tt.expectError {
 				mockRepo.On("Create", mock.AnythingOfType("*model.User")).Return(nil)
 			}
 
-			authService := NewAuthService(mockRepo)
+			authService := NewAuthService(mockRepo, mockRefreshRepo)
 			user, err := authService.Register(tt.userName, tt.email, tt.password)
 
 			if tt.expectError {
@@ -67,13 +68,9 @@ func TestAuthService_Register(t *testing.T) {
 }
 
 func TestAuthService_Login(t *testing.T) {
-	// Tạo sẵn 1 user với password đã hash để test compare
-	tempService := &AuthService{}
-	_ = tempService
-
 	validUser := &model.User{
-		UserID:   1,
-		Email:    "test@example.com",
+		UserID: 1,
+		Email:  "test@example.com",
 	}
 	// Hash password "correctpassword" thật để test bcrypt compare hoạt động đúng
 	hashed, _ := hashPasswordForTest("correctpassword")
@@ -116,20 +113,28 @@ func TestAuthService_Login(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockRepo := new(MockUserRepository)
+			mockRefreshRepo := new(MockRefreshTokenRepository)
 			mockRepo.On("FindByEmail", tt.email).Return(tt.foundUser, tt.findErr)
 
-			authService := NewAuthService(mockRepo)
-			token, err := authService.Login(tt.email, tt.password)
+			if !tt.expectError {
+				mockRefreshRepo.On("Create", mock.AnythingOfType("*model.RefreshToken")).Return(nil)
+			}
+
+			authService := NewAuthService(mockRepo, mockRefreshRepo)
+			accessToken, refreshToken, err := authService.Login(tt.email, tt.password)
 
 			if tt.expectError {
 				assert.Error(t, err)
-				assert.Empty(t, token)
+				assert.Empty(t, accessToken)
+				assert.Empty(t, refreshToken)
 			} else {
 				assert.NoError(t, err)
-				assert.NotEmpty(t, token)
+				assert.NotEmpty(t, accessToken)
+				assert.NotEmpty(t, refreshToken)
 			}
 
 			mockRepo.AssertExpectations(t)
+			mockRefreshRepo.AssertExpectations(t)
 		})
 	}
 }

@@ -60,3 +60,25 @@ func AuthGetMeFailed(userID uint, err error) {
 		Field{Key: "error", Value: err},
 	)
 }
+
+func AuthRefreshTokenInvalid() {
+	Warn("auth_refresh_token_invalid", "refresh token not found or invalid")
+}
+
+func AuthRefreshTokenExpiredOrRevoked(userID uint) {
+	Warn("auth_refresh_token_expired_or_revoked", "refresh token expired or already revoked",
+		Field{Key: "user_id", Value: userID},
+	)
+}
+
+func AuthRefreshTokenRotated(userID uint) {
+	Info("auth_refresh_token_rotated", "refresh token rotated successfully",
+		Field{Key: "user_id", Value: userID},
+	)
+}
+
+func AuthLogoutSuccess(userID uint) {
+	Info("auth_logout_success", "user logged out successfully",
+		Field{Key: "user_id", Value: userID},
+	)
+}

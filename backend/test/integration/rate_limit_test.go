@@ -30,7 +30,8 @@ func TestIntegration_RateLimit_AuthLogin(t *testing.T) {
 	commentRepo := repository.NewCommentRepository(db)
 	labelRepo := repository.NewLabelRepository(db)
 
-	authService := service.NewAuthService(userRepo)
+	refreshTokenRepo := repository.NewRefreshTokenRepository(db)
+	authService := service.NewAuthService(userRepo, refreshTokenRepo)
 	taskService := service.NewTaskService(taskRepo, memberRepo, activityRepo)
 	projectService := service.NewProjectService(projectRepo, memberRepo, userRepo)
 	epicService := service.NewEpicService(epicRepo, memberRepo)
@@ -58,7 +59,7 @@ func TestIntegration_RateLimit_AuthLogin(t *testing.T) {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "internal server error"})
 		},
 	})
-	v1.SetupRoutes(rateLimitedApp, authHandler, taskHandler, projectHandler, epicHandler, milestoneHandler, sprintHandler, commentHandler, labelHandler, activityLogHandler,true)
+	v1.SetupRoutes(rateLimitedApp, authHandler, taskHandler, projectHandler, epicHandler, milestoneHandler, sprintHandler, commentHandler, labelHandler, activityLogHandler, true)
 
 	loginBody := map[string]string{
 		"email":    "ratelimit@example.com",

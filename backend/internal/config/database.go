@@ -35,6 +35,7 @@ func InitSchema() error {
 
 	return DB.AutoMigrate(
 		&model.User{},
+		&model.RefreshToken{},
 		&model.Project{},
 		&model.Task{},
 		&model.ProjectMember{},
@@ -53,7 +54,7 @@ func ResetDatabase() error {
 		return fmt.Errorf("database is not initialized")
 	}
 
-	if err := DB.Exec("DROP TABLE IF EXISTS task_labels, labels, comments, activity_logs, sprints, milestones, epics, project_members, tasks, projects, users CASCADE").Error; err != nil {
+	if err := DB.Exec("DROP TABLE IF EXISTS task_labels, labels, comments, activity_logs, sprints, milestones, epics, project_members, tasks, projects, refresh_tokens, users CASCADE").Error; err != nil {
 		return err
 	}
 

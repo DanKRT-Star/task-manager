@@ -325,3 +325,25 @@ func (m *MockSprintRepository) Delete(sprintID uint) error {
 	args := m.Called(sprintID)
 	return args.Error(0)
 }
+
+type MockRefreshTokenRepository struct {
+	mock.Mock
+}
+
+func (m *MockRefreshTokenRepository) Create(token *model.RefreshToken) error {
+	args := m.Called(token)
+	return args.Error(0)
+}
+
+func (m *MockRefreshTokenRepository) FindByHash(tokenHash string) (*model.RefreshToken, error) {
+	args := m.Called(tokenHash)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*model.RefreshToken), args.Error(1)
+}
+
+func (m *MockRefreshTokenRepository) Revoke(tokenID uint) error {
+	args := m.Called(tokenID)
+	return args.Error(0)
+}

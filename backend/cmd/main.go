@@ -1,7 +1,10 @@
 package main
 
 import (
+	"context"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	apperror "github.com/DanKRT-Star/task-manager/internal/apperror"
@@ -54,7 +57,9 @@ func main() {
 	milestoneRepo := repository.NewMilestoneRepository(config.DB)
 	sprintRepo := repository.NewSprintRepository(config.DB)
 
-	authService := service.NewAuthService(userRepo)
+	refreshTokenRepo := repository.NewRefreshTokenRepository(config.DB)
+	authService := service.NewAuthService(userRepo, refreshTokenRepo)
+
 	taskService := service.NewTaskService(taskRepo, memberRepo, activityRepo)
 	projectService := service.NewProjectService(projectRepo, memberRepo, userRepo)
 	epicService := service.NewEpicService(epicRepo, memberRepo)
@@ -111,8 +116,32 @@ func main() {
 		port = "3000"
 	}
 
-	logger.Log.Info().Str("port", port).Msg("Server starting")
-	if err := app.Listen(":" + port); err != nil {
-		logger.Log.Fatal().Err(err).Msg("Server failed to start")
+	// Lắng nghe tín hiệu dừng từ hệ điều hành (Ctrl+C, hoặc SIGTERM khi Render/Docker dừng container)
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		logger.Log.Info().Str("port", port).Msg("Server starting")
+		if err := app.Listen(":" + port); err != nil {
+			logger.Log.Fatal().Err(err).Msg("Server failed to start")
+		}
+	}()
+
+	<-quit
+
+	logger.Log.Info().Msg("Shutdown signal received, closing gracefully...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := app.ShutdownWithContext(ctx); err != nil {
+		logger.Log.Error().Err(err).Msg("Server forced to shutdown after timeout")
 	}
+
+	if sqlDB, err := config.DB.DB(); err == nil {
+		sqlDB.Close()
+		logger.Log.Info().Msg("Database connection closed")
+	}
+
+	logger.Log.Info().Msg("Server exited gracefully")
 }

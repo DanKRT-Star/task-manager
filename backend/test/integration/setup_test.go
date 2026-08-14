@@ -42,7 +42,8 @@ func TestMain(m *testing.M) {
 	milestoneRepo := repository.NewMilestoneRepository(db)
 	sprintRepo := repository.NewSprintRepository(db)
 
-	authService := service.NewAuthService(userRepo)
+	refreshTokenRepo := repository.NewRefreshTokenRepository(db)
+	authService := service.NewAuthService(userRepo, refreshTokenRepo)
 	taskService := service.NewTaskService(taskRepo, memberRepo, activityRepo)
 	projectService := service.NewProjectService(projectRepo, memberRepo, userRepo)
 	epicService := service.NewEpicService(epicRepo, memberRepo)
@@ -71,7 +72,7 @@ func TestMain(m *testing.M) {
 		},
 	})
 
-	v1.SetupRoutes(app, authHandler, taskHandler, projectHandler, epicHandler, milestoneHandler, sprintHandler, commentHandler, labelHandler, activityLogHandler,false)
+	v1.SetupRoutes(app, authHandler, taskHandler, projectHandler, epicHandler, milestoneHandler, sprintHandler, commentHandler, labelHandler, activityLogHandler, false)
 
 	code := m.Run()
 	os.Exit(code)
@@ -93,7 +94,7 @@ func cleanTables() {
 		return
 	}
 
-	if err := db.Exec("TRUNCATE TABLE task_labels, labels, comments, sprints, milestones, epics, project_members, tasks, projects, users RESTART IDENTITY CASCADE").Error; err != nil {
+	if err := db.Exec("TRUNCATE TABLE task_labels, labels, comments, activity_logs, sprints, milestones, epics, project_members, refresh_tokens, tasks, projects, users RESTART IDENTITY CASCADE").Error; err != nil {
 		panic(err)
 	}
 }
@@ -130,5 +131,5 @@ func registerAndGetToken(t *testing.T, email, password string) string {
 	var result map[string]interface{}
 	json.NewDecoder(respLogin.Body).Decode(&result)
 
-	return result["token"].(string)
+	return result["accessToken"].(string)
 }

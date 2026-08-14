@@ -116,6 +116,7 @@ func TestIntegration_Auth_Login(t *testing.T) {
 		name           string
 		body           map[string]string
 		expectedStatus int
+		assertTokens   bool
 	}{
 		{
 			name: "correct credentials",
@@ -124,6 +125,7 @@ func TestIntegration_Auth_Login(t *testing.T) {
 				"password": "correctpassword",
 			},
 			expectedStatus: 200,
+			assertTokens:   true,
 		},
 		{
 			name: "wrong password",
@@ -152,8 +154,127 @@ func TestIntegration_Auth_Login(t *testing.T) {
 			resp, err := app.Test(req)
 			require.NoError(t, err)
 			assert.Equal(t, tt.expectedStatus, resp.StatusCode)
+
+			if tt.assertTokens {
+				var result map[string]interface{}
+				require.NoError(t, json.NewDecoder(resp.Body).Decode(&result))
+				assert.NotEmpty(t, result["accessToken"])
+				assert.NotEmpty(t, result["refreshToken"])
+			}
 		})
 	}
+}
+
+func TestIntegration_Auth_RefreshToken(t *testing.T) {
+	cleanTables()
+
+	registerBody := map[string]string{
+		"userName": "Refresher",
+		"email":    "refresher@example.com",
+		"password": "12345678",
+	}
+	jsonRegister, _ := json.Marshal(registerBody)
+	reqRegister := httptest.NewRequest("POST", "/api/v1/auth/register", bytes.NewReader(jsonRegister))
+	reqRegister.Header.Set("Content-Type", "application/json")
+	app.Test(reqRegister)
+
+	loginBody := map[string]string{
+		"email":    "refresher@example.com",
+		"password": "12345678",
+	}
+	jsonLogin, _ := json.Marshal(loginBody)
+	reqLogin := httptest.NewRequest("POST", "/api/v1/auth/login", bytes.NewReader(jsonLogin))
+	reqLogin.Header.Set("Content-Type", "application/json")
+	respLogin, err := app.Test(reqLogin)
+	require.NoError(t, err)
+
+	var loginResult map[string]interface{}
+	require.NoError(t, json.NewDecoder(respLogin.Body).Decode(&loginResult))
+	originalRefreshToken := loginResult["refreshToken"].(string)
+
+	t.Run("valid refresh token returns new token pair", func(t *testing.T) {
+		body, _ := json.Marshal(map[string]string{"refreshToken": originalRefreshToken})
+		req := httptest.NewRequest("POST", "/api/v1/auth/refresh", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := app.Test(req)
+		require.NoError(t, err)
+		assert.Equal(t, 200, resp.StatusCode)
+
+		var result map[string]interface{}
+		require.NoError(t, json.NewDecoder(resp.Body).Decode(&result))
+		assert.NotEmpty(t, result["accessToken"])
+		assert.NotEmpty(t, result["refreshToken"])
+		assert.NotEqual(t, originalRefreshToken, result["refreshToken"])
+	})
+
+	t.Run("reused (rotated) refresh token is rejected", func(t *testing.T) {
+		body, _ := json.Marshal(map[string]string{"refreshToken": originalRefreshToken})
+		req := httptest.NewRequest("POST", "/api/v1/auth/refresh", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := app.Test(req)
+		require.NoError(t, err)
+		assert.Equal(t, 401, resp.StatusCode)
+	})
+
+	t.Run("invalid refresh token is rejected", func(t *testing.T) {
+		body, _ := json.Marshal(map[string]string{"refreshToken": "not-a-real-token"})
+		req := httptest.NewRequest("POST", "/api/v1/auth/refresh", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := app.Test(req)
+		require.NoError(t, err)
+		assert.Equal(t, 401, resp.StatusCode)
+	})
+}
+
+func TestIntegration_Auth_Logout(t *testing.T) {
+	cleanTables()
+
+	registerBody := map[string]string{
+		"userName": "Logouter",
+		"email":    "logouter@example.com",
+		"password": "12345678",
+	}
+	jsonRegister, _ := json.Marshal(registerBody)
+	reqRegister := httptest.NewRequest("POST", "/api/v1/auth/register", bytes.NewReader(jsonRegister))
+	reqRegister.Header.Set("Content-Type", "application/json")
+	app.Test(reqRegister)
+
+	loginBody := map[string]string{
+		"email":    "logouter@example.com",
+		"password": "12345678",
+	}
+	jsonLogin, _ := json.Marshal(loginBody)
+	reqLogin := httptest.NewRequest("POST", "/api/v1/auth/login", bytes.NewReader(jsonLogin))
+	reqLogin.Header.Set("Content-Type", "application/json")
+	respLogin, err := app.Test(reqLogin)
+	require.NoError(t, err)
+
+	var loginResult map[string]interface{}
+	require.NoError(t, json.NewDecoder(respLogin.Body).Decode(&loginResult))
+	refreshToken := loginResult["refreshToken"].(string)
+
+	t.Run("logout revokes the refresh token", func(t *testing.T) {
+		body, _ := json.Marshal(map[string]string{"refreshToken": refreshToken})
+		req := httptest.NewRequest("POST", "/api/v1/auth/logout", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := app.Test(req)
+		require.NoError(t, err)
+		assert.Equal(t, 200, resp.StatusCode)
+	})
+
+	t.Run("revoked refresh token can no longer be used", func(t *testing.T) {
+		body, _ := json.Marshal(map[string]string{"refreshToken": refreshToken})
+		req := httptest.NewRequest("POST", "/api/v1/auth/refresh", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := app.Test(req)
+		require.NoError(t, err)
+		assert.Equal(t, 401, resp.StatusCode)
+	})
 }
 
 func TestIntegration_Auth_LoginMissingFields(t *testing.T) {

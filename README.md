@@ -184,6 +184,38 @@ Every push to `main` triggers a GitHub Actions pipeline that:
 
 See [`.github/workflows/backend-ci.yml`](.github/workflows/backend-ci.yml).
 
+## Database Backup & Restore
+
+The production database is backed up automatically every day at **01:00 (Vietnam time / UTC+7)** via GitHub Actions.
+
+- Workflow: [`.github/workflows/db-backup.yml`](.github/workflows/db-backup.yml)
+- Backups are stored as workflow **artifacts**, retained for **30 days**
+- Can also be triggered manually: **Actions** tab → **Database Backup** → **Run workflow**
+
+> Render Postgres also provides its own automatic backups (see the **Backups** tab in the Render Dashboard). This workflow is a **second layer of protection** — e.g. in case of lost access to Render, or to keep a copy outside Render's infrastructure — not a replacement for it.
+
+### Downloading a backup
+
+1. Go to the **Actions** tab → select the desired **Database Backup** run
+2. Scroll to **Artifacts** → download `db-backup-<run_id>`
+3. Unzip to get the `.dump` file
+
+### Restoring
+
+Requires `pg_restore` (version equal to or newer than the target server's Postgres version).
+
+```powershell
+pg_restore --clean --if-exists -d "postgresql://user:pass@host/dbname" backup_20260817_010000.dump
+```
+
+- `-d "..."` — connection string of the **target** database to restore into (from Render Dashboard → Connections → **External Database URL**)
+- `--clean --if-exists` — drops existing objects before restoring, avoiding conflicts
+- Replace `backup_20260817_010000.dump` with the actual downloaded filename
+
+### Required secret
+
+The backup workflow reads `PROD_DATABASE_URL` from **Settings → Secrets and variables → Actions**. This must be Render's **External Database URL** (not Internal), since GitHub Actions runs outside Render's network.
+
 ## Notable Design Decisions
 
 - **Authorization enforced at the repository layer** — every task query includes the owning `user_id`, preventing cross-user data access even if a check is missed elsewhere in the code.

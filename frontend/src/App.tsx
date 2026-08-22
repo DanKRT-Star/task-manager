@@ -1,9 +1,15 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/auth_context";
 import { useAuth } from "./hooks/use_auth";
+
+// Import pages
 import LoginPage from "./pages/login_page";
 import RegisterPage from "./pages/register_page";
 import TasksPage from "./pages/tasks_page";
+import ProjectPage from "./pages/project_page";
+import DashboardPage from "./pages/dashboard_page";
+import MainLayout from "./layouts/main_layout";
+import ProjectDetailPage from "./pages/project_detail_page";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
@@ -16,7 +22,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 function PublicRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
   if (isAuthenticated) {
-    return <Navigate to="/tasks" replace />;
+    return <Navigate to="/" replace />; 
   }
   return <>{children}</>;
 }
@@ -40,16 +46,23 @@ function AppRoutes() {
           </PublicRoute>
         }
       />
+      
+      {/* Khối Route chứa Layout */}
       <Route
-        path="/tasks"
+        path="/"
         element={
           <ProtectedRoute>
-            <TasksPage />
+            <MainLayout />
           </ProtectedRoute>
         }
-      />
-      <Route path="/" element={<Navigate to="/tasks" replace />} />
-      <Route path="*" element={<Navigate to="/tasks" replace />} />
+      >
+        <Route index element={<DashboardPage />} />
+        <Route path="tasks" element={<TasksPage />} />
+        <Route path="projects" element={<ProjectPage />} />
+        <Route path="projects/:id" element={<ProjectDetailPage />} />
+      </Route>
+
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }

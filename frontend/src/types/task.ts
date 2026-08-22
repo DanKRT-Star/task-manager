@@ -1,3 +1,5 @@
+import type { Label } from "./label";
+
 export type TaskStatus = "pending" | "in_progress" | "done";
 
 export interface Task {
@@ -5,7 +7,13 @@ export interface Task {
   title: string;
   description: string;
   status: TaskStatus;
+  projectId?: number;
+  epicId?: number;
+  milestoneId?: number;
+  sprintId?: number;
+  labels?: Label[];
   userId: number;
+  assigneeId?: number;
   deadline: string;
   createdAt: string;
   updatedAt: string;
@@ -16,6 +24,11 @@ export interface CreateTaskPayload {
   description?: string;
   status?: TaskStatus;
   deadline?: string;
+  projectId?: number;
+  epicId?: number;
+  sprintId?: number;
+  milestoneId?: number;
+  assigneeId?: number;
 }
 
 export interface UpdateTaskPayload {
@@ -23,6 +36,10 @@ export interface UpdateTaskPayload {
   description?: string;
   status?: TaskStatus;
   deadline?: string;
+  epicId?: number;
+  sprintId?: number;
+  milestoneId?: number;
+  assigneeId?: number;
 }
 
 export interface TaskListResponse {

@@ -11,6 +11,8 @@ const (
 	ActiconDeadlineChanged   ActivityAction = "deadline_changed"
 	ActionDescriptionUpdated ActivityAction = "description_updated"
 	ActionUpdated            ActivityAction = "updated"
+	ActionLabelAttached      ActivityAction = "label_attached"
+	ActionLabelDetached      ActivityAction = "label_detached"
 )
 
 type ActivityLog struct {

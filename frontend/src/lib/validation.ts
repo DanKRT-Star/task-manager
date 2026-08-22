@@ -24,3 +24,44 @@ export const taskSchema = z.object({
 });
 
 export type TaskFormData = z.infer<typeof taskSchema>;
+
+export const projectSchema = z.object({
+  name: z.string().min(1, "Tên project là bắt buộc").max(200),
+  description: z.string().max(1000).optional(),
+  deadline: z.string().optional(),
+});
+export type ProjectFormData = z.infer<typeof projectSchema>;
+
+export const epicSchema = z.object({
+  title: z.string().min(1, "Tiêu đề là bắt buộc").max(200),
+  description: z.string().max(1000).optional(),
+});
+export type EpicFormData = z.infer<typeof epicSchema>;
+
+export const milestoneSchema = z.object({
+  title: z.string().min(1, "Tiêu đề là bắt buộc").max(200),
+  description: z.string().max(1000).optional(),
+  dueDate: z.string().optional(),
+});
+export type MilestoneFormData = z.infer<typeof milestoneSchema>;
+
+export const addMemberSchema = z.object({
+  email: z.string().min(1, "Email là bắt buộc").email("Email không hợp lệ"),
+});
+export type AddMemberFormData = z.infer<typeof addMemberSchema>;
+
+export const labelSchema = z.object({
+  name: z.string().min(1, "Tên label là bắt buộc").max(50),
+  color: z
+    .string()
+    .regex(/^#[0-9A-Fa-f]{6}$/, "Màu phải đúng định dạng hex, ví dụ #ff0000")
+    .optional(),
+});
+export type LabelFormData = z.infer<typeof labelSchema>;
+
+export const sprintSchema = z.object({
+  name: z.string().min(1, "Tên sprint là bắt buộc").max(200),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+});
+export type SprintFormData = z.infer<typeof sprintSchema>;

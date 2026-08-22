@@ -60,13 +60,13 @@ func main() {
 	refreshTokenRepo := repository.NewRefreshTokenRepository(config.DB)
 	authService := service.NewAuthService(userRepo, refreshTokenRepo)
 
-	taskService := service.NewTaskService(taskRepo, memberRepo, activityRepo)
+	taskService := service.NewTaskService(taskRepo, memberRepo, activityRepo, epicRepo, milestoneRepo, sprintRepo)
 	projectService := service.NewProjectService(projectRepo, memberRepo, userRepo)
 	epicService := service.NewEpicService(epicRepo, memberRepo)
 	milestoneService := service.NewMilestoneService(milestoneRepo, memberRepo)
 	sprintService := service.NewSprintService(sprintRepo, memberRepo)
 	commentService := service.NewCommentService(commentRepo, taskRepo, memberRepo)
-	labelService := service.NewLabelService(labelRepo, taskRepo, memberRepo)
+	labelService := service.NewLabelService(labelRepo, taskRepo, memberRepo, activityRepo)
 	activityLogService := service.NewActivityLogService(activityRepo, taskRepo, memberRepo)
 
 	authHandler := handler.NewAuthHandler(authService)
@@ -115,8 +115,7 @@ func main() {
 	if port == "" {
 		port = "3000"
 	}
-
-	// Lắng nghe tín hiệu dừng từ hệ điều hành (Ctrl+C, hoặc SIGTERM khi Render/Docker dừng container)
+	
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 

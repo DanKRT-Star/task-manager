@@ -14,14 +14,13 @@ type TaskHandler struct {
 	TaskService *service.TaskService
 }
 
-
 func NewTaskHandler(taskService *service.TaskService) *TaskHandler {
 	return &TaskHandler{TaskService: taskService}
 }
 
 // CreateTask godoc
 // @Summary      Create a task
-// @Description  Create a new task for the authenticated user, optionally attached to a project and assigned to a project member
+// @Description  Create a new task for the authenticated user, optionally attached to a project, epic, milestone, and assigned to a project member
 // @Tags         tasks
 // @Accept       json
 // @Produce      json
@@ -42,13 +41,14 @@ func (h *TaskHandler) CreateTask(c fiber.Ctx) error {
 		return apperror.BadRequest(validator.FormatValidationError(err))
 	}
 
-	task, err := h.TaskService.CreateTask(userID, req.Title, req.Description, req.Status, req.Deadline, req.ProjectID, req.AssigneeID)
+	task, err := h.TaskService.CreateTask(userID, req.Title, req.Description, req.Status, req.Deadline, req.ProjectID, req.AssigneeID, req.EpicID, req.MilestoneID, req.SprintID)
 	if err != nil {
 		return apperror.BadRequest(err.Error())
 	}
 
 	return c.Status(201).JSON(task)
 }
+
 // GetTasks godoc
 // @Summary      List tasks
 // @Description  Get a paginated list of tasks for the authenticated user, with optional filtering and sorting
@@ -112,7 +112,7 @@ func (h *TaskHandler) UpdateTask(c fiber.Ctx) error {
 		return apperror.BadRequest(validator.FormatValidationError(err))
 	}
 
-	task, err := h.TaskService.UpdateTask(uint(taskID), userID, req.Title, req.Description, req.Status, req.Deadline, req.AssigneeID)
+	task, err := h.TaskService.UpdateTask(uint(taskID), userID, req.Title, req.Description, req.Status, req.Deadline, req.AssigneeID, req.EpicID, req.MilestoneID, req.SprintID)
 	if err != nil {
 		return apperror.BadRequest(err.Error())
 	}

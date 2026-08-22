@@ -44,13 +44,13 @@ func TestMain(m *testing.M) {
 
 	refreshTokenRepo := repository.NewRefreshTokenRepository(db)
 	authService := service.NewAuthService(userRepo, refreshTokenRepo)
-	taskService := service.NewTaskService(taskRepo, memberRepo, activityRepo)
+	taskService := service.NewTaskService(taskRepo, memberRepo, activityRepo, epicRepo, milestoneRepo, sprintRepo)
 	projectService := service.NewProjectService(projectRepo, memberRepo, userRepo)
 	epicService := service.NewEpicService(epicRepo, memberRepo)
 	milestoneService := service.NewMilestoneService(milestoneRepo, memberRepo)
 	sprintService := service.NewSprintService(sprintRepo, memberRepo)
 	commentService := service.NewCommentService(commentRepo, taskRepo, memberRepo)
-	labelService := service.NewLabelService(labelRepo, taskRepo, memberRepo)
+	labelService := service.NewLabelService(labelRepo, taskRepo, memberRepo, activityRepo)
 	activityLogService := service.NewActivityLogService(activityRepo, taskRepo, memberRepo)
 
 	authHandler := handler.NewAuthHandler(authService)

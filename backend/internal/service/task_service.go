@@ -10,16 +10,78 @@ import (
 )
 
 type TaskService struct {
-	TaskRepo     repository.TaskRepositoryInterface
-	MemberRepo   repository.ProjectMemberRepositoryInterface
-	ActivityRepo repository.ActivityLogRepositoryInterface
+	TaskRepo      repository.TaskRepositoryInterface
+	MemberRepo    repository.ProjectMemberRepositoryInterface
+	ActivityRepo  repository.ActivityLogRepositoryInterface
+	EpicRepo      repository.EpicRepositoryInterface
+	MilestoneRepo repository.MilestoneRepositoryInterface
+	SprintRepo    repository.SprintRepositoryInterface
 }
 
-func NewTaskService(taskRepo repository.TaskRepositoryInterface, memberRepo repository.ProjectMemberRepositoryInterface, activityRepo repository.ActivityLogRepositoryInterface) *TaskService {
-	return &TaskService{TaskRepo: taskRepo, MemberRepo: memberRepo, ActivityRepo: activityRepo}
+func NewTaskService(
+	taskRepo repository.TaskRepositoryInterface,
+	memberRepo repository.ProjectMemberRepositoryInterface,
+	activityRepo repository.ActivityLogRepositoryInterface,
+	epicRepo repository.EpicRepositoryInterface,
+	milestoneRepo repository.MilestoneRepositoryInterface,
+	sprintRepo repository.SprintRepositoryInterface,
+) *TaskService {
+	return &TaskService{
+		TaskRepo:      taskRepo,
+		MemberRepo:    memberRepo,
+		ActivityRepo:  activityRepo,
+		EpicRepo:      epicRepo,
+		MilestoneRepo: milestoneRepo,
+		SprintRepo:    sprintRepo,
+	}
 }
 
-func (s *TaskService) CreateTask(userID uint, title, description string, status model.TaskStatus, deadlineStr string, projectID, assigneeID *uint) (*model.Task, error) {
+// validateEpicInProject đảm bảo epic được chọn thuộc đúng project của task,
+// tránh trường hợp gắn nhầm epic của project khác.
+func (s *TaskService) validateEpicInProject(epicID, projectID uint) error {
+	epic, err := s.EpicRepo.FindByID(epicID)
+	if err != nil {
+		return errors.New("epic not found")
+	}
+	if epic.ProjectID != projectID {
+		return errors.New("epic does not belong to this project")
+	}
+	return nil
+}
+
+// validateMilestoneInProject đảm bảo milestone được chọn thuộc đúng project của task.
+func (s *TaskService) validateMilestoneInProject(milestoneID, projectID uint) error {
+	milestone, err := s.MilestoneRepo.FindByID(milestoneID)
+	if err != nil {
+		return errors.New("milestone not found")
+	}
+	if milestone.ProjectID != projectID {
+		return errors.New("milestone does not belong to this project")
+	}
+	return nil
+}
+
+// validateSprintInProject đảm bảo sprint được chọn thuộc đúng project của task.
+func (s *TaskService) validateSprintInProject(sprintID, projectID uint) error {
+	sprint, err := s.SprintRepo.FindByID(sprintID)
+	if err != nil {
+		return errors.New("sprint not found")
+	}
+	if sprint.ProjectID != projectID {
+		return errors.New("sprint does not belong to this project")
+	}
+	return nil
+}
+
+// Thứ tự tham số phải khớp với cách task_handler.go gọi hàm này:
+// h.TaskService.CreateTask(userID, req.Title, req.Description, req.Status, req.Deadline, req.ProjectID, req.AssigneeID, req.EpicID, req.MilestoneID, req.SprintID)
+func (s *TaskService) CreateTask(
+	userID uint,
+	title, description string,
+	status model.TaskStatus,
+	deadlineStr string,
+	projectID, assigneeID, epicID, milestoneID, sprintID *uint,
+) (*model.Task, error) {
 	if title == "" {
 		logger.TaskMissingTitle(userID)
 		return nil, errors.New("title is required")
@@ -43,9 +105,29 @@ func (s *TaskService) CreateTask(userID uint, title, description string, status 
 				return nil, errors.New("assignee is not a member of this project")
 			}
 		}
-	} else if assigneeID != nil {
-		logger.TaskCreateAssigneeWithoutProject(userID, *assigneeID)
-		return nil, errors.New("cannot assign a task that does not belong to a project")
+		if epicID != nil {
+			if err := s.validateEpicInProject(*epicID, *projectID); err != nil {
+				return nil, err
+			}
+		}
+		if milestoneID != nil {
+			if err := s.validateMilestoneInProject(*milestoneID, *projectID); err != nil {
+				return nil, err
+			}
+		}
+		if sprintID != nil {
+			if err := s.validateSprintInProject(*sprintID, *projectID); err != nil {
+				return nil, err
+			}
+		}
+	} else {
+		if assigneeID != nil {
+			logger.TaskCreateAssigneeWithoutProject(userID, *assigneeID)
+			return nil, errors.New("cannot assign a task that does not belong to a project")
+		}
+		if epicID != nil || milestoneID != nil || sprintID != nil {
+			return nil, errors.New("cannot assign epic, milestone, or sprint to a task that does not belong to a project")
+		}
 	}
 
 	var deadline time.Time
@@ -65,6 +147,9 @@ func (s *TaskService) CreateTask(userID uint, title, description string, status 
 		UserID:      userID,
 		ProjectID:   projectID,
 		AssigneeID:  assigneeID,
+		EpicID:      epicID,
+		MilestoneID: milestoneID,
+		SprintID:    sprintID,
 		Deadline:    deadline,
 	}
 
@@ -125,7 +210,15 @@ func (s *TaskService) canModifyTask(task *model.Task, userID uint) bool {
 	return task.UserID == userID || (task.AssigneeID != nil && *task.AssigneeID == userID)
 }
 
-func (s *TaskService) UpdateTask(taskID, userID uint, title, description string, status model.TaskStatus, deadlineStr string, assigneeID *uint) (*model.Task, error) {
+// Thứ tự tham số phải khớp với cách task_handler.go gọi hàm này:
+// h.TaskService.UpdateTask(uint(taskID), userID, req.Title, req.Description, req.Status, req.Deadline, req.AssigneeID, req.EpicID, req.MilestoneID, req.SprintID)
+func (s *TaskService) UpdateTask(
+	taskID, userID uint,
+	title, description string,
+	status model.TaskStatus,
+	deadlineStr string,
+	assigneeID, epicID, milestoneID, sprintID *uint,
+) (*model.Task, error) {
 	task, err := s.TaskRepo.FindByIDOnly(taskID)
 	if err != nil {
 		logger.TaskUpdateNotFound(taskID, userID)
@@ -169,6 +262,33 @@ func (s *TaskService) UpdateTask(taskID, userID uint, title, description string,
 			return nil, errors.New("assignee is not a member of this project")
 		}
 		task.AssigneeID = assigneeID
+	}
+	if epicID != nil {
+		if task.ProjectID == nil {
+			return nil, errors.New("cannot assign epic to a task that does not belong to a project")
+		}
+		if err := s.validateEpicInProject(*epicID, *task.ProjectID); err != nil {
+			return nil, err
+		}
+		task.EpicID = epicID
+	}
+	if milestoneID != nil {
+		if task.ProjectID == nil {
+			return nil, errors.New("cannot assign milestone to a task that does not belong to a project")
+		}
+		if err := s.validateMilestoneInProject(*milestoneID, *task.ProjectID); err != nil {
+			return nil, err
+		}
+		task.MilestoneID = milestoneID
+	}
+	if sprintID != nil {
+		if task.ProjectID == nil {
+			return nil, errors.New("cannot assign sprint to a task that does not belong to a project")
+		}
+		if err := s.validateSprintInProject(*sprintID, *task.ProjectID); err != nil {
+			return nil, err
+		}
+		task.SprintID = sprintID
 	}
 
 	if err := s.TaskRepo.Update(task); err != nil {

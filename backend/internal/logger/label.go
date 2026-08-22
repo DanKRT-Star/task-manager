@@ -137,3 +137,12 @@ func LabelProjectAccessDenied(userID, projectID uint) {
 		Field{Key: "project_id", Value: projectID},
 	)
 }
+
+func LabelActivityLogFailed(taskID, labelID, userID uint, err error) {
+	Error("label_activity_log_failed", "failed to write activity log for label attach/detach",
+		Field{Key: "task_id", Value: taskID},
+		Field{Key: "label_id", Value: labelID},
+		Field{Key: "user_id", Value: userID},
+		Field{Key: "error", Value: err},
+	)
+}

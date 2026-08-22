@@ -20,7 +20,7 @@ func (r *TaskRepository) Create(task *model.Task) error {
 // FindByID giữ nguyên logic cũ - dùng cho task cá nhân (không thuộc project)
 func (r *TaskRepository) FindByID(taskID, userID uint) (*model.Task, error) {
 	var task model.Task
-	err := r.DB.Where("task_id = ? AND user_id = ?", taskID, userID).First(&task).Error
+	err := r.DB.Preload("Labels").Where("task_id = ? AND user_id = ?", taskID, userID).First(&task).Error
 	if err != nil {
 		return nil, err
 	}
@@ -30,7 +30,7 @@ func (r *TaskRepository) FindByID(taskID, userID uint) (*model.Task, error) {
 // FindByIDOnly lấy task theo ID, không check quyền - việc check quyền chuyển cho service xử lý
 func (r *TaskRepository) FindByIDOnly(taskID uint) (*model.Task, error) {
 	var task model.Task
-	err := r.DB.First(&task, taskID).Error
+	err := r.DB.Preload("Labels").First(&task, taskID).Error
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +56,7 @@ func (r *TaskRepository) FindAll(userID uint, status string, sort string, page, 
 	}
 
 	offset := (page - 1) * limit
-	err := query.Limit(limit).Offset(offset).Find(&tasks).Error
+	err := query.Preload("Labels").Limit(limit).Offset(offset).Find(&tasks).Error
 
 	return tasks, total, err
 }
@@ -81,7 +81,7 @@ func (r *TaskRepository) FindAllByProject(projectID uint, status string, sort st
 	}
 
 	offset := (page - 1) * limit
-	err := query.Limit(limit).Offset(offset).Find(&tasks).Error
+	err := query.Preload("Labels").Limit(limit).Offset(offset).Find(&tasks).Error
 
 	return tasks, total, err
 }

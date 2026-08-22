@@ -1,4 +1,4 @@
-import emptyImage from "../assets/empty.png";
+import emptyImage from "../../assets/empty.png";
 
 export default function EmptyTasksRow() {
   return (

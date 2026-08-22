@@ -9,13 +9,24 @@ import (
 )
 
 type LabelService struct {
-	LabelRepo  repository.LabelRepositoryInterface
-	TaskRepo   repository.TaskRepositoryInterface
-	MemberRepo repository.ProjectMemberRepositoryInterface
+	LabelRepo    repository.LabelRepositoryInterface
+	TaskRepo     repository.TaskRepositoryInterface
+	MemberRepo   repository.ProjectMemberRepositoryInterface
+	ActivityRepo repository.ActivityLogRepositoryInterface
 }
 
-func NewLabelService(labelRepo repository.LabelRepositoryInterface, taskRepo repository.TaskRepositoryInterface, memberRepo repository.ProjectMemberRepositoryInterface) *LabelService {
-	return &LabelService{LabelRepo: labelRepo, TaskRepo: taskRepo, MemberRepo: memberRepo}
+func NewLabelService(
+	labelRepo repository.LabelRepositoryInterface,
+	taskRepo repository.TaskRepositoryInterface,
+	memberRepo repository.ProjectMemberRepositoryInterface,
+	activityRepo repository.ActivityLogRepositoryInterface,
+) *LabelService {
+	return &LabelService{
+		LabelRepo:    labelRepo,
+		TaskRepo:     taskRepo,
+		MemberRepo:   memberRepo,
+		ActivityRepo: activityRepo,
+	}
 }
 
 func (s *LabelService) CreateLabel(userID, projectID uint, name, color string) (*model.Label, error) {
@@ -105,6 +116,16 @@ func (s *LabelService) AttachLabel(userID, taskID, labelID uint) error {
 		logger.LabelAttachFailed(labelID, taskID, userID, err)
 		return err
 	}
+
+	if err := s.ActivityRepo.Create(&model.ActivityLog{
+		TaskID: taskID,
+		UserID: userID,
+		Action: model.ActionLabelAttached,
+		Detail: label.Name,
+	}); err != nil {
+		logger.LabelActivityLogFailed(taskID, labelID, userID, err)
+	}
+
 	logger.LabelAttached(taskID, labelID, userID)
 	return nil
 }
@@ -124,10 +145,28 @@ func (s *LabelService) DetachLabel(userID, taskID, labelID uint) error {
 		return errors.New("you are not a member of this project")
 	}
 
+	// Lấy tên label trước khi gỡ để ghi log cho dễ đọc; nếu không tìm thấy
+	// (label đã bị xoá trước đó) vẫn tiếp tục detach, chỉ log không kèm tên.
+	label, labelErr := s.LabelRepo.FindByID(labelID)
+
 	if err := s.LabelRepo.DetachFromTask(taskID, labelID); err != nil {
 		logger.LabelDetachFailed(labelID, taskID, userID, err)
 		return err
 	}
+
+	detail := ""
+	if labelErr == nil && label != nil {
+		detail = label.Name
+	}
+	if err := s.ActivityRepo.Create(&model.ActivityLog{
+		TaskID: taskID,
+		UserID: userID,
+		Action: model.ActionLabelDetached,
+		Detail: detail,
+	}); err != nil {
+		logger.LabelActivityLogFailed(taskID, labelID, userID, err)
+	}
+
 	logger.LabelDetached(taskID, labelID, userID)
 	return nil
 }

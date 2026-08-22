@@ -9,6 +9,9 @@ type CreateTaskRequest struct {
 	Deadline    string           `json:"deadline"`
 	ProjectID   *uint            `json:"projectId"`
 	AssigneeID  *uint            `json:"assigneeId"`
+	EpicID      *uint            `json:"epicId"`
+	MilestoneID *uint            `json:"milestoneId"`
+	SprintID    *uint            `json:"sprintId"`
 }
 
 type UpdateTaskRequest struct {
@@ -17,6 +20,9 @@ type UpdateTaskRequest struct {
 	Status      model.TaskStatus `json:"status"`
 	Deadline    string           `json:"deadline"`
 	AssigneeID  *uint            `json:"assigneeId"`
+	EpicID      *uint            `json:"epicId"`
+	MilestoneID *uint            `json:"milestoneId"`
+	SprintID    *uint            `json:"sprintId"`
 }
 
 type TaskListResponse struct {

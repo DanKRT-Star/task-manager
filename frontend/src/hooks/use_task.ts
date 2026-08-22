@@ -28,19 +28,42 @@ export function useTask() {
     }
   }, []);
 
+  // Lấy toàn bộ task của 1 project — dùng cho trang Project Detail.
+  // Backend chưa hỗ trợ lọc theo epicId/milestoneId ở query, nên lấy limit lớn
+  // rồi lọc/nhóm ở client theo epic/milestone đã chọn.
+  const fetchProjectTasks = useCallback(
+    async (projectId: number, params?: GetTasksParams) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await taskService.getProjectTasks(projectId, {
+          limit: 100,
+          ...params,
+        });
+        setTasks(res.data);
+        setTotal(res.total);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to fetch tasks");
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
+
   const createTask = async (payload: CreateTaskPayload) => {
-  try {
-    const newTask = await taskService.createTask(payload);
-    setTasks((prev) => [...prev, newTask]);
-    toast.success("Tạo công việc thành công");
-    return newTask;
-  } catch (err) {
-    const message =
-      (err as { response?: { data?: { error?: string } } })?.response?.data
-        ?.error || "Tạo công việc thất bại";
-    toast.error(message);
-    throw err;
-  }
+    try {
+      const newTask = await taskService.createTask(payload);
+      setTasks((prev) => [...prev, newTask]);
+      toast.success("Tạo công việc thành công");
+      return newTask;
+    } catch (err) {
+      const message =
+        (err as { response?: { data?: { error?: string } } })?.response?.data
+          ?.error || "Tạo công việc thất bại";
+      toast.error(message);
+      throw err;
+    }
   };
 
   const updateTask = async (taskId: number, payload: UpdateTaskPayload) => {
@@ -78,6 +101,7 @@ export function useTask() {
     loading,
     error,
     fetchTasks,
+    fetchProjectTasks,
     createTask,
     updateTask,
     deleteTask,

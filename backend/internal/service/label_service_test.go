@@ -28,6 +28,7 @@ func TestLabelService_CreateLabel(t *testing.T) {
 			mockLabelRepo := new(MockLabelRepository)
 			mockTaskRepo := new(MockTaskRepository)
 			mockMemberRepo := new(MockProjectMemberRepository)
+			mockActivityRepo := new(MockActivityLogRepository)
 
 			if tt.isMember {
 				mockMemberRepo.On("FindMember", tt.projectID, tt.userID).Return(&model.ProjectMember{Role: model.RoleMember}, nil)
@@ -38,7 +39,7 @@ func TestLabelService_CreateLabel(t *testing.T) {
 				mockMemberRepo.On("FindMember", tt.projectID, tt.userID).Return(nil, assert.AnError)
 			}
 
-			service := NewLabelService(mockLabelRepo, mockTaskRepo, mockMemberRepo)
+			service := NewLabelService(mockLabelRepo, mockTaskRepo, mockMemberRepo, mockActivityRepo)
 			label, err := service.CreateLabel(tt.userID, tt.projectID, tt.labelName, tt.color)
 
 			if tt.expectError {
@@ -68,6 +69,7 @@ func TestLabelService_GetProjectLabels(t *testing.T) {
 			mockLabelRepo := new(MockLabelRepository)
 			mockTaskRepo := new(MockTaskRepository)
 			mockMemberRepo := new(MockProjectMemberRepository)
+			mockActivityRepo := new(MockActivityLogRepository)
 
 			if tt.isMember {
 				mockMemberRepo.On("FindMember", uint(11), uint(5)).Return(&model.ProjectMember{Role: model.RoleMember}, nil)
@@ -76,7 +78,7 @@ func TestLabelService_GetProjectLabels(t *testing.T) {
 				mockMemberRepo.On("FindMember", uint(11), uint(5)).Return(nil, assert.AnError)
 			}
 
-			service := NewLabelService(mockLabelRepo, mockTaskRepo, mockMemberRepo)
+			service := NewLabelService(mockLabelRepo, mockTaskRepo, mockMemberRepo, mockActivityRepo)
 			labels, err := service.GetProjectLabels(5, 11)
 
 			if tt.expectError {
@@ -105,6 +107,7 @@ func TestLabelService_DeleteLabel_OnlyOwnerCanDelete(t *testing.T) {
 			mockLabelRepo := new(MockLabelRepository)
 			mockTaskRepo := new(MockTaskRepository)
 			mockMemberRepo := new(MockProjectMemberRepository)
+			mockActivityRepo := new(MockActivityLogRepository)
 
 			mockLabelRepo.On("FindByID", uint(7)).Return(&model.Label{LabelID: 7, ProjectID: 99}, nil)
 			mockMemberRepo.On("FindMember", uint(99), uint(3)).Return(&model.ProjectMember{Role: tt.role}, nil)
@@ -112,7 +115,7 @@ func TestLabelService_DeleteLabel_OnlyOwnerCanDelete(t *testing.T) {
 				mockLabelRepo.On("Delete", uint(7)).Return(nil)
 			}
 
-			service := NewLabelService(mockLabelRepo, mockTaskRepo, mockMemberRepo)
+			service := NewLabelService(mockLabelRepo, mockTaskRepo, mockMemberRepo, mockActivityRepo)
 			err := service.DeleteLabel(3, 7)
 
 			if tt.expectError {
@@ -147,6 +150,7 @@ func TestLabelService_AttachAndDetachLabel(t *testing.T) {
 			mockLabelRepo := new(MockLabelRepository)
 			mockTaskRepo := new(MockTaskRepository)
 			mockMemberRepo := new(MockProjectMemberRepository)
+			mockActivityRepo := new(MockActivityLogRepository)
 
 			if tt.isTaskFound {
 				mockTaskRepo.On("FindByIDOnly", tt.taskID).Return(&model.Task{TaskID: tt.taskID, ProjectID: tt.taskProject}, nil)
@@ -155,6 +159,7 @@ func TestLabelService_AttachAndDetachLabel(t *testing.T) {
 					if tt.isLabelFound && tt.labelProject == *tt.taskProject && !tt.expectError {
 						mockLabelRepo.On("FindByID", tt.labelID).Return(&model.Label{LabelID: tt.labelID, ProjectID: *tt.taskProject}, nil)
 						mockLabelRepo.On("AttachToTask", tt.taskID, tt.labelID).Return(nil)
+						mockActivityRepo.On("Create", mock.AnythingOfType("*model.ActivityLog")).Return(nil)
 					} else if tt.isLabelFound {
 						mockLabelRepo.On("FindByID", tt.labelID).Return(&model.Label{LabelID: tt.labelID, ProjectID: tt.labelProject}, nil)
 					}
@@ -163,7 +168,7 @@ func TestLabelService_AttachAndDetachLabel(t *testing.T) {
 				mockTaskRepo.On("FindByIDOnly", tt.taskID).Return(nil, assert.AnError)
 			}
 
-			service := NewLabelService(mockLabelRepo, mockTaskRepo, mockMemberRepo)
+			service := NewLabelService(mockLabelRepo, mockTaskRepo, mockMemberRepo, mockActivityRepo)
 			err := service.AttachLabel(tt.userID, tt.taskID, tt.labelID)
 
 			if tt.expectError {
@@ -192,6 +197,7 @@ func TestLabelService_GetTaskLabels(t *testing.T) {
 			mockLabelRepo := new(MockLabelRepository)
 			mockTaskRepo := new(MockTaskRepository)
 			mockMemberRepo := new(MockProjectMemberRepository)
+			mockActivityRepo := new(MockActivityLogRepository)
 
 			if tt.projectID == nil {
 				mockTaskRepo.On("FindByIDOnly", uint(9)).Return(&model.Task{TaskID: 9, ProjectID: nil}, nil)
@@ -206,7 +212,7 @@ func TestLabelService_GetTaskLabels(t *testing.T) {
 				}
 			}
 
-			service := NewLabelService(mockLabelRepo, mockTaskRepo, mockMemberRepo)
+			service := NewLabelService(mockLabelRepo, mockTaskRepo, mockMemberRepo, mockActivityRepo)
 			labels, err := service.GetTaskLabels(4, 9)
 
 			if tt.expectError {

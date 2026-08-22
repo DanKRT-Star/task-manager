@@ -19,7 +19,13 @@ export interface LoginPayload {
 
 export interface LoginResponse {
   message: string;
-  token: string;
+  accessToken: string;
+  refreshToken: string;
+}
+
+export interface RefreshTokenResponse {
+  accessToken: string;
+  refreshToken: string;
 }
 
 export interface RegisterResponse {

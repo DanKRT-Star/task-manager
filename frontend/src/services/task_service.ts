@@ -13,6 +13,18 @@ export const taskService = {
     return res.data;
   },
 
+  // Task trong 1 project cụ thể — dùng cho trang Project Detail
+  getProjectTasks: async (
+    projectId: number,
+    params?: GetTasksParams
+  ): Promise<TaskListResponse> => {
+    const res = await api.get<TaskListResponse>(
+      `/projects/${projectId}/tasks`,
+      { params }
+    );
+    return res.data;
+  },
+
   createTask: async (payload: CreateTaskPayload): Promise<Task> => {
     const res = await api.post<Task>("/tasks", payload);
     return res.data;

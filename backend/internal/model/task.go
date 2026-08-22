@@ -31,6 +31,7 @@ type Task struct {
 	SprintID    *uint      `gorm:"index" json:"sprintId,omitempty"`
 	UserID      uint       `gorm:"index;not null" json:"userId"`
 	AssigneeID  *uint      `gorm:"index" json:"assigneeId,omitempty"`
+	Labels      []Label    `gorm:"many2many:task_labels;joinForeignKey:TaskID;joinReferences:LabelID" json:"labels,omitempty"`
 	Deadline    time.Time  `json:"deadline"`
 	CreatedAt   time.Time  `json:"createdAt"`
 	UpdatedAt   time.Time  `json:"updatedAt"`

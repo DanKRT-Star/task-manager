@@ -70,7 +70,7 @@ Route → Handler → Service → Repository → Database
 - **Logger** — named, per-domain event helpers (e.g. `logger.TaskCreated(...)`) instead of ad-hoc log statements, ensuring every logged event is discoverable and consistent
 
 ### Domain model
-
+```
 User ──< ProjectMember >── Project ──< Epic
 ├─< Milestone
 ├─< Sprint
@@ -82,10 +82,11 @@ User ──< ProjectMember >── Project ──< Epic
 ├── Milestone (optional)
 ├── Sprint (optional)
 └── Assignee (optional, must be a project member)
+```
 
 
 A task may exist standalone (no project) or within a project; Epic/Milestone/Sprint/Label assignment is only valid for project tasks, and each is validated to belong to the *same* project as the task.
-
+```
 backend/
 ├── cmd/ # application entrypoint (routing, graceful shutdown)
 ├── internal/
@@ -102,7 +103,8 @@ backend/
 │ └── validator/ # validation setup
 ├── test/integration/ # end-to-end API tests
 └── Dockerfile
-
+```
+```
 frontend/
 ├── src/
 │ ├── components/ # reusable UI components (widgets, panels, badges)
@@ -113,7 +115,7 @@ frontend/
 │ ├── services/ # API client layer (Axios, incl. auto token refresh)
 │ └── types/ # TypeScript types
 └── Dockerfile
-
+```
 
 ## Getting Started
 

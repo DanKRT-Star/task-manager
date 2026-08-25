@@ -26,6 +26,7 @@ type Task struct {
 	Description string     `json:"description"`
 	Status      TaskStatus `gorm:"type:varchar(20);default:'pending';check:status IN ('pending','in_progress','done')" json:"status"`
 	ProjectID   *uint      `gorm:"index" json:"projectId,omitempty"`
+	Project     *Project   `gorm:"-" json:"project,omitempty"`
 	EpicID      *uint      `gorm:"index" json:"epicId,omitempty"`
 	MilestoneID *uint      `gorm:"index" json:"milestoneId,omitempty"`
 	SprintID    *uint      `gorm:"index" json:"sprintId,omitempty"`

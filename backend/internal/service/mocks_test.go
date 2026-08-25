@@ -57,9 +57,9 @@ func (m *MockTaskRepository) FindByIDOnly(taskID uint) (*model.Task, error) {
 	return args.Get(0).(*model.Task), args.Error(1)
 }
 
-func (m *MockTaskRepository) FindAll(userID uint, status, sort string, page, limit int) ([]model.Task, int64, error) {
-	args := m.Called(userID, status, sort, page, limit)
-	return args.Get(0).([]model.Task), args.Get(1).(int64), args.Error(2)
+func (m *MockTaskRepository) FindMyTasks(userID uint, status, sort string, page, limit int) ([]model.Task, int64, error) {
+    args := m.Called(userID, status, sort, page, limit)
+    return args.Get(0).([]model.Task), args.Get(1).(int64), args.Error(2)
 }
 
 func (m *MockTaskRepository) FindAllByProject(projectID uint, status, sort string, page, limit int) ([]model.Task, int64, error) {

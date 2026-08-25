@@ -12,7 +12,7 @@ type TaskRepositoryInterface interface {
 	Create(task *model.Task) error
 	FindByID(taskID, userID uint) (*model.Task, error)
 	FindByIDOnly(taskID uint) (*model.Task, error)
-	FindAll(userID uint, status string, sort string, page, limit int) ([]model.Task, int64, error)
+	FindMyTasks(userID uint, status string, sort string, page, limit int) ([]model.Task, int64, error)
 	FindAllByProject(projectID uint, status string, sort string, page, limit int) ([]model.Task, int64, error)
 	Update(task *model.Task) error
 	Delete(taskID uint) error

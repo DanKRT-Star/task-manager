@@ -7,6 +7,7 @@ export default function Sidebar() {
     { path: "/", label: "Dashboard", icon: "bx-home" },
     { path: "/tasks", label: "My Tasks", icon: "bx-check-square" },
     { path: "/projects", label: "Projects", icon: "bx-folder" },
+    { path: "/calendar", label: "Calendar", icon: "bx-calendar"},
   ];
 
   return (

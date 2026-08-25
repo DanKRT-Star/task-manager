@@ -171,9 +171,10 @@ func (s *TaskService) CreateTask(
 	return task, nil
 }
 
+
 func (s *TaskService) GetTasks(userID uint, status, sort string, page, limit int) ([]model.Task, int64, error) {
 	page, limit = normalizePagination(page, limit)
-	tasks, total, err := s.TaskRepo.FindAll(userID, status, sort, page, limit)
+	tasks, total, err := s.TaskRepo.FindMyTasks(userID, status, sort, page, limit)
 	if err != nil {
 		logger.TaskListFetchFailed(userID, status, err)
 		return nil, 0, err

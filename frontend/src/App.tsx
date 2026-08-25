@@ -10,6 +10,7 @@ import ProjectPage from "./pages/project_page";
 import DashboardPage from "./pages/dashboard_page";
 import MainLayout from "./layouts/main_layout";
 import ProjectDetailPage from "./pages/project_detail_page";
+import CalendarPage from "./pages/calendar_page";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
@@ -60,6 +61,7 @@ function AppRoutes() {
         <Route path="tasks" element={<TasksPage />} />
         <Route path="projects" element={<ProjectPage />} />
         <Route path="projects/:id" element={<ProjectDetailPage />} />
+        <Route path="calendar" element={<CalendarPage/>} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTask } from "../hooks/use_task";
 import TaskStatusSelect from "../components/task/task_status_select";
 import TaskFormPanel from "../components/task/task_form_panel";
@@ -10,6 +11,7 @@ const PAGE_SIZE = 10;
 
 export default function TasksPage() {
   const { tasks, total, loading, fetchTasks, createTask, updateTask, deleteTask } = useTask();
+  const navigate = useNavigate();
 
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<TaskStatus | "">("");
@@ -34,14 +36,25 @@ export default function TasksPage() {
   };
 
   const handleEdit = (task: Task) => {
+    // Task thuộc project (mình chỉ là assignee) — không có form sửa đầy đủ ở đây
+    // (thiếu epic/milestone/sprint/assignee select), điều hướng sang project thay vì mở panel sai.
+    if (task.projectId) {
+      navigate(`/projects/${task.projectId}`);
+      return;
+    }
     setEditingTask(task);
     setPanelOpen(true);
   };
 
-  const handleDelete = async (taskId: number) => {
+  const handleDelete = async (task: Task) => {
+    if (task.projectId) {
+      // Task project không xoá được từ trang cá nhân — quyền/logic xoá khác (owner-only, v.v.)
+      navigate(`/projects/${task.projectId}`);
+      return;
+    }
     if (!confirm("Bạn chắc chắn muốn xóa công việc này?")) return;
     try {
-      await deleteTask(taskId);
+      await deleteTask(task.taskId);
     } catch {
       // toast đã xử lý trong hook
     }
@@ -122,6 +135,7 @@ export default function TasksPage() {
                 <tr>
                   <th className="px-4 py-3 font-medium">Status</th>
                   <th className="px-4 py-3 font-medium">Task Title</th>
+                  <th className="px-4 py-3 font-medium">Project</th>
                   <th className="px-4 py-3 font-medium">Description</th>
                   <th className="px-4 py-3 font-medium">Deadline</th>
                   <th className="px-4 py-3 font-medium">Actions</th>
@@ -139,6 +153,19 @@ export default function TasksPage() {
                     <td className="px-4 py-3 font-medium text-(--color-text)">
                       {task.title}
                     </td>
+                    <td className="px-4 py-3">
+                      {task.project ? (
+                        <button
+                          onClick={() => navigate(`/projects/${task.project!.projectId}`)}
+                          className="text-xs text-(--color-primary) hover:underline"
+                          title="Go to project"
+                        >
+                          {task.project.name}
+                        </button>
+                      ) : (
+                        <span className="app-text-muted text-xs">—</span>
+                      )}
+                    </td>
                     <td className="max-w-xs truncate px-4 py-3 text-(--color-muted)">
                       {task.description || "—"}
                     </td>
@@ -150,12 +177,14 @@ export default function TasksPage() {
                         <button
                           onClick={() => handleEdit(task)}
                           className="text-blue-500 hover:text-blue-700"
+                          title={task.projectId ? "Go to project" : "Edit"}
                         >
                           <i className="bx bx-edit text-xl" />
                         </button>
                         <button
-                          onClick={() => handleDelete(task.taskId)}
+                          onClick={() => handleDelete(task)}
                           className="text-red-500 hover:text-red-700"
+                          title={task.projectId ? "Go to project" : "Delete"}
                         >
                           <i className="bx bx-trash text-xl" />
                         </button>
